@@ -10,6 +10,7 @@ setLogLevel('debug');
 // Variáveis globais do Firebase
 let app, auth, db;
 let userId;
+let appId;
 let lastVisible = null;
 const pageSize = 5;
 
@@ -72,7 +73,6 @@ async function initializeFirebase() {
             auth = getAuth(app);
             db = getFirestore(app);
 
-            // A variável `initialAuthToken` não está definida, o que causará erro.
             // Para continuar com o login anônimo, substitua o bloco `if/else` abaixo.
             await signInAnonymously(auth);
 
@@ -82,6 +82,8 @@ async function initializeFirebase() {
                     console.log("Usuário autenticado:", userId);
                     userIdDisplay.textContent = userId;
                     appIdDisplay.textContent = firebaseConfig.appId;
+                    appId = firebaseConfig.appId;
+                    appIdDisplay.textContent = appId;
 
                     // Inicializa listeners e funções após a autenticação
                     setupTimeEntriesListener();
@@ -493,3 +495,4 @@ nextPageButton.addEventListener('click', () => {
     currentPage++;
     setupTimeEntriesListener();
 });
+
