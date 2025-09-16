@@ -1,6 +1,6 @@
 import firebaseConfig from './FireBase.js';
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+import { getAuth, onAuthStateChanged, signOut, createUserWithEmailAndPassword, signInWithEmailAndPassword, sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 import { getFirestore, doc, getDoc, addDoc, setDoc, updateDoc, deleteDoc, onSnapshot, collection, query, where, orderBy, limit, startAfter, endBefore, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
@@ -48,16 +48,34 @@ const themeToggle = document.getElementById('theme-toggle');
 const body = document.body;
 const profileToggle = document.getElementById('profile-toggle');
 const profileModal = document.getElementById('profile-modal');
-const userIdDisplay = document.getElementById('user-id-display');
+const userView = document.getElementById('user-view');
+const guestView = document.getElementById('guest-view');
+const userEmailDisplay = document.getElementById('user-email-display');
 const logoutButton = document.getElementById('logout-button');
 const shareToggle = document.getElementById('share-toggle');
 const shareModal = document.getElementById('share-modal');
 const appIdDisplay = document.getElementById('app-id-display');
 const copyAppIdButton = document.getElementById('copy-app-id');
 const closeShareModalButton = document.getElementById('close-share-modal');
+
+const showLoginModalButton = document.getElementById('show-login-modal-button');
+const showRegisterModalButton = document.getElementById('show-register-modal-button');
+const loginModal = document.getElementById('login-modal');
+const loginForm = document.getElementById('login-form');
+const loginEmailInput = document.getElementById('login-email');
+const loginPasswordInput = document.getElementById('login-password');
+const cancelLoginButton = document.getElementById('cancel-login-button');
+const registerModal = document.getElementById('register-modal');
+const registerForm = document.getElementById('register-form');
+const cancelRegisterButton = document.getElementById('cancel-register-button');
 const messageModal = document.getElementById('message-modal');
 const messageText = document.getElementById('message-text');
 const messageOkButton = document.getElementById('message-ok');
+const forgotPasswordLink = document.getElementById('forgot-password-link');
+const forgotPasswordModal = document.getElementById('forgot-password-modal');
+const forgotPasswordForm = document.getElementById('forgot-password-form');
+const forgotEmailInput = document.getElementById('forgot-email');
+const cancelForgotButton = document.getElementById('cancel-forgot-button');
 
 // Função para mostrar um modal de mensagem
 function showMessageModal(message) {
@@ -73,27 +91,44 @@ async function initializeFirebase() {
             auth = getAuth(app);
             db = getFirestore(app);
 
-            // Para continuar com o login anônimo, substitua o bloco `if/else` abaixo.
-            await signInAnonymously(auth);
-
             onAuthStateChanged(auth, async (user) => {
                 if (user) {
+                    // Usuário está logado
                     userId = user.uid;
                     console.log("Usuário autenticado:", userId);
-                    userIdDisplay.textContent = userId;
-                    appIdDisplay.textContent = firebaseConfig.appId;
+
+                    // Atualiza a UI para usuário logado
+                    userEmailDisplay.textContent = user.email || 'Usuário Anônimo';
+                    guestView.classList.add('hidden');
+                    userView.classList.remove('hidden');
+
                     appId = firebaseConfig.appId;
                     appIdDisplay.textContent = appId;
 
-                    // Inicializa listeners e funções após a autenticação
+                    // Habilita funcionalidades do app
+                    projectInput.disabled = false;
+                    startButton.disabled = isRunning;
+
+                    // Esconde modais de autenticação
+                    loginModal.classList.add('hidden');
+                    registerModal.classList.add('hidden');
+                    profileModal.classList.add('hidden');
+
+                    // Inicializa listeners
                     setupTimeEntriesListener();
                     setupRealtimeChart();
                 } else {
-                    console.log("Nenhum usuário logado. Tentando login anônimo...");
-                    signInAnonymously(auth).catch((error) => {
-                        console.error("Erro ao tentar login anônimo:", error);
-                        showMessageModal("Ocorreu um erro ao inicializar o aplicativo. Por favor, tente novamente.");
-                    });
+                    // Usuário está deslogado
+                    userId = null;
+                    console.log("Nenhum usuário logado.");
+
+                    // Atualiza a UI para visitante
+                    userView.classList.add('hidden');
+                    guestView.classList.remove('hidden');
+
+                    // Desabilita funcionalidades e limpa a UI
+                    disableAppFeatures();
+                    showMessageModal("Por favor, faça login ou cadastre-se para usar o aplicativo.");
                 }
             });
         } else {
@@ -108,6 +143,20 @@ async function initializeFirebase() {
 
 // Iniciar a aplicação
 document.addEventListener('DOMContentLoaded', initializeFirebase);
+
+function disableAppFeatures() {
+    resetTimer();
+    projectInput.disabled = true;
+    startButton.disabled = true;
+    stopButton.disabled = true;
+    resetButton.disabled = true;
+    timeEntriesList.innerHTML = '<p class="text-center text-gray-500">Faça login para ver suas entradas de tempo.</p>';
+    if (chartInstance) {
+        chartInstance.destroy();
+        chartInstance = null;
+    }
+    paginationControls.classList.add('hidden');
+}
 
 
 // Funções do Rastreador de Tempo
@@ -472,11 +521,82 @@ copyAppIdButton.addEventListener('click', () => {
     showMessageModal("ID do aplicativo copiado!");
 });
 
+showLoginModalButton.addEventListener('click', () => {
+    loginModal.classList.remove('hidden');
+    profileModal.classList.add('hidden');
+});
+
+showRegisterModalButton.addEventListener('click', () => {
+    registerModal.classList.remove('hidden');
+    profileModal.classList.add('hidden');
+});
+
+cancelLoginButton.addEventListener('click', () => {
+    loginModal.classList.add('hidden');
+});
+
+cancelRegisterButton.addEventListener('click', () => {
+    registerModal.classList.add('hidden');
+});
+
+forgotPasswordLink.addEventListener('click', (e) => {
+    e.preventDefault();
+    loginModal.classList.add('hidden');
+    forgotPasswordModal.classList.remove('hidden');
+});
+
+cancelForgotButton.addEventListener('click', () => {
+    forgotPasswordModal.classList.add('hidden');
+});
+
+forgotPasswordForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const email = forgotEmailInput.value;
+    try {
+        await sendPasswordResetEmail(auth, email);
+        forgotPasswordModal.classList.add('hidden');
+        showMessageModal("Um link para redefinição de senha foi enviado para o seu e-mail, caso ele esteja cadastrado.");
+        forgotPasswordForm.reset();
+    } catch (error) {
+        console.error("Erro ao enviar e-mail de redefinição de senha:", error);
+        // Mostra uma mensagem genérica para não revelar se um e-mail existe ou não no sistema
+        showMessageModal("Se o e-mail estiver correto e cadastrado, um link de redefinição será enviado.");
+    }
+});
+
+loginForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const email = loginEmailInput.value;
+    const password = loginPasswordInput.value;
+
+    try {
+        await signInWithEmailAndPassword(auth, email, password);
+        showMessageModal("Login realizado com sucesso!");
+        loginForm.reset();
+    } catch (error) {
+        console.error("Erro no login:", error);
+        showMessageModal(`Erro no login: ${error.message.replace('Firebase: ', '')}`);
+    }
+});
+
+registerForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const email = registerForm['register-email'].value;
+    const password = registerForm['register-password'].value;
+
+    try {
+        await createUserWithEmailAndPassword(auth, email, password);
+        showMessageModal("Cadastro realizado com sucesso! Você já está logado.");
+        registerForm.reset();
+    } catch (error) {
+        console.error("Erro no cadastro:", error);
+        showMessageModal(`Erro no cadastro: ${error.message.replace('Firebase: ', '')}`);
+    }
+});
+
 logoutButton.addEventListener('click', async () => {
     try {
         await signOut(auth);
-        showMessageModal("Você foi desconectado.");
-        // O onAuthStateChanged listener se encarregará de fazer o login anônimo novamente
     } catch (error) {
         console.error("Erro ao fazer logout:", error);
         showMessageModal("Erro ao sair. Tente novamente.");
@@ -495,4 +615,3 @@ nextPageButton.addEventListener('click', () => {
     currentPage++;
     setupTimeEntriesListener();
 });
-
