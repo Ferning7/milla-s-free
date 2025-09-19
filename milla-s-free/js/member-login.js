@@ -3,6 +3,14 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebas
 import { getAuth, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-functions.js";
 
+// Aplica o tema salvo no localStorage ao carregar a página
+const savedTheme = localStorage.getItem('theme');
+if (savedTheme === 'light') {
+    document.body.classList.remove('dark');
+} else {
+    document.body.classList.add('dark'); // Garante que o padrão seja escuro
+}
+
 // Inicialização do Firebase
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);

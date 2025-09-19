@@ -7,6 +7,14 @@ import { setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-
 // Ativar logging para depuração
 setLogLevel('debug');
 
+// Aplica o tema salvo no localStorage ao carregar a página
+const savedTheme = localStorage.getItem('theme');
+if (savedTheme === 'light') {
+    document.body.classList.remove('dark');
+} else {
+    document.body.classList.add('dark'); // Garante que o padrão seja escuro
+}
+
 // Variáveis globais do Firebase
 let app, auth, db;
 let userId;
@@ -23,6 +31,7 @@ let currentPage = 1;
 let chartInstance = null;
 let allProjects = {}; 
 let allTimeEntries = []; // Array para armazenar todas as entradas de tempo
+let selectedMemberId = 'all'; // 'all', 'company' (para empresa), ou um memberId
 let membersMap = new Map(); // Mapa para armazenar nomes de colaboradores
 
 // Elementos da UI
@@ -80,6 +89,7 @@ const forgotPasswordModal = document.getElementById('forgot-password-modal');
 const forgotPasswordForm = document.getElementById('forgot-password-form');
 const forgotEmailInput = document.getElementById('forgot-email');
 const cancelForgotButton = document.getElementById('cancel-forgot-button');
+const memberFilter = document.getElementById('member-filter');
 
 // Função para mostrar um modal de mensagem
 function showMessageModal(message, type = 'alert') {
@@ -406,8 +416,28 @@ function updateChart(data) {
     });
 }
 
+function populateMemberFilter(membersMap) {
+    const currentFilterValue = memberFilter.value;
+    memberFilter.innerHTML = '<option value="all">Todos os Colaboradores</option>';
+    memberFilter.innerHTML += '<option value="company">Apenas Empresa</option>';
+    membersMap.forEach((name, id) => {
+        const option = document.createElement('option');
+        option.value = id;
+        option.textContent = name;
+        memberFilter.appendChild(option);
+    });
+    memberFilter.value = currentFilterValue; // Mantém o filtro selecionado após recarregar
+}
+
 function renderCurrentPage() {
-    const totalEntries = allTimeEntries.length;
+    let filteredEntries = allTimeEntries;
+    if (selectedMemberId === 'company') {
+        filteredEntries = allTimeEntries.filter(entry => entry.memberId === null);
+    } else if (selectedMemberId !== 'all') {
+        filteredEntries = allTimeEntries.filter(entry => entry.memberId === selectedMemberId);
+    }
+
+    const totalEntries = filteredEntries.length;
     if (totalEntries === 0) {
         timeEntriesList.innerHTML = '<p class="text-center text-gray-500">Nenhuma entrada de tempo encontrada.</p>';
         paginationControls.classList.add('hidden');
@@ -425,7 +455,7 @@ function renderCurrentPage() {
     }
 
     const startIndex = (currentPage - 1) * pageSize;
-    const pageEntries = allTimeEntries.slice(startIndex, startIndex + pageSize);
+    const pageEntries = filteredEntries.slice(startIndex, startIndex + pageSize);
 
     renderTimeEntries(pageEntries, membersMap);
 
@@ -455,6 +485,8 @@ async function setupTimeEntriesListener() {
         membersSnapshot.forEach(doc => {
             membersMap.set(doc.id, doc.data().name);
         });
+
+        populateMemberFilter(membersMap);
 
         if (snapshot.empty) {
             allTimeEntries = [];
@@ -611,6 +643,12 @@ resetButton.addEventListener('click', resetTimer);
 saveEditButton.addEventListener('click', saveEditedEntry);
 cancelEditButton.addEventListener('click', () => editModal.classList.add('hidden'));
 
+memberFilter.addEventListener('change', () => {
+    selectedMemberId = memberFilter.value;
+    currentPage = 1; // Reseta para a primeira página ao mudar o filtro
+    renderCurrentPage();
+});
+
 // UI Interações
 menuToggle.addEventListener('click', () => {
     sidebar.classList.toggle('active');
@@ -626,6 +664,8 @@ sidebarOverlay.addEventListener('click', () => {
 
 themeToggle.addEventListener('click', () => {
     body.classList.toggle('dark');
+    const currentTheme = body.classList.contains('dark') ? 'dark' : 'light';
+    localStorage.setItem('theme', currentTheme);
 });
 
 profileToggle.addEventListener('click', (e) => {

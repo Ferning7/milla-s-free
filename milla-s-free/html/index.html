@@ -93,7 +93,14 @@
 
             <!-- Time Entries List -->
             <div class="mt-12 max-w-xl mx-auto">
-                <h4 class="text-xl font-bold mb-4">Entradas de Tempo Salvas</h4>
+                <div class="flex justify-between items-center mb-4">
+                    <h4 class="text-xl font-bold">Entradas de Tempo Salvas</h4>
+                    <div class="relative">
+                        <select id="member-filter" class="bg-gray-200 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg p-2 text-sm focus:outline-none focus:border-blue-500">
+                            <!-- Options will be populated by JS -->
+                        </select>
+                    </div>
+                </div>
                 <div id="time-entries-list" class="space-y-4"></div>
                 <!-- Controles de Paginação -->
                 <div id="pagination-controls" class="flex justify-between items-center mt-6 hidden">

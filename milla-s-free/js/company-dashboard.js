@@ -6,6 +6,14 @@ import { getFirestore, collection, addDoc, query, where, onSnapshot, doc, delete
 // Ativar logging para depuração
 setLogLevel('debug');
 
+// Aplica o tema salvo no localStorage ao carregar a página
+const savedTheme = localStorage.getItem('theme');
+if (savedTheme === 'light') {
+    document.body.classList.remove('dark');
+} else {
+    document.body.classList.add('dark'); // Garante que o padrão seja escuro
+}
+
 // Variáveis globais
 let app, auth, db;
 let userId;

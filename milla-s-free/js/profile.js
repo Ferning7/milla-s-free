@@ -3,6 +3,14 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebas
 import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 import { getFirestore, doc, getDoc, collection, query, where, addDoc, onSnapshot, orderBy } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
+// Aplica o tema salvo no localStorage ao carregar a página
+const savedTheme = localStorage.getItem('theme');
+if (savedTheme === 'light') {
+    document.body.classList.remove('dark');
+} else {
+    document.body.classList.add('dark'); // Garante que o padrão seja escuro
+}
+
 // Variáveis globais
 let app, db;
 let memberProfile = null;
@@ -40,6 +48,8 @@ messageOkButton.addEventListener('click', () => messageModal.classList.add('hidd
 
 themeToggle.addEventListener('click', () => {
     body.classList.toggle('dark');
+    const currentTheme = body.classList.contains('dark') ? 'dark' : 'light';
+    localStorage.setItem('theme', currentTheme);
 });
 
 // Lógica de Autenticação e Inicialização
