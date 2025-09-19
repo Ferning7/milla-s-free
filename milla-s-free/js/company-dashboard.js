@@ -37,6 +37,7 @@ const saveEditMemberButton = document.getElementById('save-edit-member-button');
 const editMemberIdInput = document.getElementById('edit-member-id');
 const editMemberNameInput = document.getElementById('edit-member-name');
 const editMemberEmailInput = document.getElementById('edit-member-email');
+const themeToggle = document.getElementById('theme-toggle');
 
 // Funções de UI
 function showMessageModal(message, type = 'alert') {
@@ -78,6 +79,12 @@ messageOkButton.addEventListener('click', () => messageModal.classList.add('hidd
 
 addMemberButton.addEventListener('click', () => createMemberModal.classList.remove('hidden'));
 cancelCreateMemberButton.addEventListener('click', () => createMemberModal.classList.add('hidden'));
+
+themeToggle.addEventListener('click', () => {
+    document.body.classList.toggle('dark');
+    const currentTheme = document.body.classList.contains('dark') ? 'dark' : 'light';
+    localStorage.setItem('theme', currentTheme);
+});
 
 // Inicialização
 async function initializeDashboard() {
