@@ -34,26 +34,39 @@ body {
 
 .sidebar {
     width: 250px;
-    background-color: #2563EB;
+    background: linear-gradient(180deg, #2563EB 0%, #1D4ED8 100%);
     position: fixed;
     top: 0;
     left: -250px;
     height: 100%;
     transition: left 0.3s ease-in-out;
-    z-index: 10;
+    z-index: 40;
+    box-shadow: 5px 0px 15px rgba(0,0,0,0.2);
 }
 
 .sidebar.active {
     left: 0;
 }
 
-.menu-link {
+.dark .sidebar {
+    background: linear-gradient(180deg, #2D3748 0%, #1A202C 100%);
+}
+
+#sidebar-overlay.active {
     display: block;
+    backdrop-filter: blur(2px);
+}
+
+.menu-link {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
     width: 100%;
-    text-align: center;
-    padding: 0.5rem;
+    text-align: left;
+    padding: 0.75rem 1.5rem;
     border-radius: 0.5rem;
     transition: background-color 0.3s;
+    font-size: 1rem;
 }
 
 .menu-link:hover {
@@ -106,4 +119,8 @@ body {
 
 .timer-active {
     animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+.button-spinner {
+    display: none;
 }

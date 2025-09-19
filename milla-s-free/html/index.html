@@ -12,18 +12,21 @@
         }
     </script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="../css/styles.css">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
 </head>
 
 <body class="dark">
+    <!-- Sidebar Overlay -->
+    <div id="sidebar-overlay" class="fixed inset-0 bg-black bg-opacity-25 z-30 hidden"></div>
+
     <!-- Sidebar -->
-    <div id="sidebar" class="sidebar text-white shadow-lg flex flex-col items-center py-8 space-y-4">
+    <div id="sidebar" class="sidebar text-white shadow-lg flex flex-col items-center py-8">
         <h2 class="text-2xl font-bold mb-8">Navegação</h2>
-        <a href="#" class="menu-link">Início</a>
-        <a href="#" class="menu-link">Sobre</a>
-        <a href="#" class="menu-link">Serviços</a>
-        <a href="#" class="menu-link">Contato</a>
+        <a href="#" class="menu-link"><i class="fas fa-home w-6"></i><span>Início</span></a>
+        <a href="#" class="menu-link"><i class="fas fa-info-circle w-6"></i><span>Sobre</span></a>
+        <a href="#" class="menu-link"><i class="fas fa-concierge-bell w-6"></i><span>Serviços</span></a>
+        <a href="#" class="menu-link"><i class="fas fa-envelope w-6"></i><span>Contato</span></a>
     </div>
 
     <div class="flex flex-col min-h-screen">
@@ -144,11 +147,14 @@
         <div id="user-view" class="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-lg text-sm hidden">
             <p>Usuário:</p>
             <p id="user-email-display" class="font-mono text-gray-400 break-all text-xs"></p>
+            <div id="verification-status" class="text-xs mt-1"></div>
+            <a href="company-dashboard.html" class="block text-center mt-4 w-full px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-bold no-underline">Gerenciar Perfil</a>
             <button id="logout-button" class="mt-4 w-full text-red-500 hover:underline">Sair</button>
         </div>
         <div id="guest-view" class="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-lg text-sm">
             <h3 class="text-lg font-bold mb-4 text-center">Bem-vindo!</h3>
             <div class="space-y-2">
+                <a href="member-login.html" class="block w-full text-center px-4 py-2 rounded-lg bg-green-600 hover:bg-green-700 text-white font-bold no-underline">Sou Colaborador</a>
                 <button id="show-login-modal-button" class="w-full px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-bold">Login</button>
                 <button id="show-register-modal-button" class="w-full px-4 py-2 rounded-lg bg-gray-500 hover:bg-gray-600 text-white font-bold">Cadastrar</button>
             </div>
@@ -266,8 +272,10 @@
             <div class="flex justify-end space-x-4">
                 <button id="cancel-edit-button"
                     class="px-4 py-2 rounded-lg bg-gray-500 hover:bg-gray-600 text-white font-bold">Cancelar</button>
-                <button id="save-edit-button"
-                    class="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-bold">Salvar</button>
+                <button id="save-edit-button" class="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-bold w-24 text-center">
+                    <span class="button-text">Salvar</span>
+                    <i class="fas fa-spinner fa-spin hidden button-spinner"></i>
+                </button>
             </div>
         </div>
     </div>
@@ -286,19 +294,7 @@
         </div>
     </div>
 
-    <script type="module" src="scripts.js">
-    const firebaseConfig = {
-    apiKey: "AIzaSyBHBLmdqXHEiNgr6o5ZsUVW9Spevzx6VJo",
-    authDomain: "milla-sfree.firebaseapp.com",
-    projectId: "milla-sfree",
-    storageBucket: "milla-sfree.firebasestorage.app",
-    messagingSenderId: "564773137824",
-    appId: "1:564773137824:web:2f6ca5efd3768f72a988c5",
-    measurementId: "G-E4D4JPS8H2"
-    };
-    
-    export default firebaseConfig;
-    </script>
+    <script type="module" src="../js/scripts.js"></script>
 </body>
 
 </html>

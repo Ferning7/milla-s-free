@@ -1,6 +1,6 @@
 import firebaseConfig from './FireBase.js';
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-import { getAuth, onAuthStateChanged, signOut, createUserWithEmailAndPassword, signInWithEmailAndPassword, sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+import { getAuth, onAuthStateChanged, signOut, createUserWithEmailAndPassword, signInWithEmailAndPassword, sendPasswordResetEmail, sendEmailVerification } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 import { getFirestore, doc, getDoc, addDoc, setDoc, updateDoc, deleteDoc, onSnapshot, collection, query, where, orderBy, limit, startAfter, endBefore, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
@@ -21,7 +21,9 @@ let timerInterval = null;
 let projectToStart = '';
 let currentPage = 1;
 let chartInstance = null;
-let allProjects = {}; // Objeto para armazenar todos os projetos para o gráfico
+let allProjects = {}; 
+let allTimeEntries = []; // Array para armazenar todas as entradas de tempo
+let membersMap = new Map(); // Mapa para armazenar nomes de colaboradores
 
 // Elementos da UI
 const timerDisplay = document.getElementById('timer-display');
@@ -44,6 +46,7 @@ const saveEditButton = document.getElementById('save-edit-button');
 const cancelEditButton = document.getElementById('cancel-edit-button');
 const menuToggle = document.getElementById('menu-toggle');
 const sidebar = document.getElementById('sidebar');
+const sidebarOverlay = document.getElementById('sidebar-overlay');
 const themeToggle = document.getElementById('theme-toggle');
 const body = document.body;
 const profileToggle = document.getElementById('profile-toggle');
@@ -71,6 +74,7 @@ const cancelRegisterButton = document.getElementById('cancel-register-button');
 const messageModal = document.getElementById('message-modal');
 const messageText = document.getElementById('message-text');
 const messageOkButton = document.getElementById('message-ok');
+const messageCancelButton = document.getElementById('message-cancel');
 const forgotPasswordLink = document.getElementById('forgot-password-link');
 const forgotPasswordModal = document.getElementById('forgot-password-modal');
 const forgotPasswordForm = document.getElementById('forgot-password-form');
@@ -78,9 +82,39 @@ const forgotEmailInput = document.getElementById('forgot-email');
 const cancelForgotButton = document.getElementById('cancel-forgot-button');
 
 // Função para mostrar um modal de mensagem
-function showMessageModal(message) {
-    messageText.textContent = message;
-    messageModal.classList.remove('hidden');
+function showMessageModal(message, type = 'alert') {
+    return new Promise((resolve) => {
+        messageText.textContent = message;
+
+        if (type === 'confirm') {
+            messageOkButton.textContent = 'Confirmar';
+            messageCancelButton.classList.remove('hidden');
+        } else {
+            messageOkButton.textContent = 'OK';
+            messageCancelButton.classList.add('hidden');
+        }
+
+        messageModal.classList.remove('hidden');
+
+        const okListener = () => {
+            cleanup();
+            resolve(true);
+        };
+
+        const cancelListener = () => {
+            cleanup();
+            resolve(false);
+        };
+
+        const cleanup = () => {
+            messageModal.classList.add('hidden');
+            messageOkButton.removeEventListener('click', okListener);
+            messageCancelButton.removeEventListener('click', cancelListener);
+        };
+
+        messageOkButton.addEventListener('click', okListener, { once: true });
+        messageCancelButton.addEventListener('click', cancelListener, { once: true });
+    });
 }
 
 // Inicialização do Firebase
@@ -117,6 +151,7 @@ async function initializeFirebase() {
                     // Inicializa listeners
                     setupTimeEntriesListener();
                     setupRealtimeChart();
+                    updateVerificationStatus(user);
                 } else {
                     // Usuário está deslogado
                     userId = null;
@@ -158,6 +193,33 @@ function disableAppFeatures() {
     paginationControls.classList.add('hidden');
 }
 
+function updateVerificationStatus(user) {
+    const verificationStatusEl = document.getElementById('verification-status');
+    if (!verificationStatusEl) return;
+
+    if (user.emailVerified) {
+        verificationStatusEl.innerHTML = `<span class="text-green-500 flex items-center gap-1"><i class="fas fa-check-circle"></i> E-mail verificado</span>`;
+    } else {
+        verificationStatusEl.innerHTML = `
+            <div class="flex items-center justify-between">
+                 <span class="text-yellow-500 flex items-center gap-1"><i class="fas fa-exclamation-triangle"></i> E-mail não verificado</span>
+                 <button id="resend-verification-button" class="text-xs text-blue-500 hover:underline ml-2">Reenviar</button>
+            </div>
+        `;
+    }
+}
+
+userView.addEventListener('click', async (e) => {
+    if (e.target.id === 'resend-verification-button') {
+        try {
+            await sendEmailVerification(auth.currentUser);
+            showMessageModal("Um novo e-mail de verificação foi enviado.");
+        } catch (error) {
+            console.error("Erro ao reenviar email de verificação:", error);
+            showMessageModal("Erro ao reenviar e-mail. Tente novamente mais tarde.");
+        }
+    }
+});
 
 // Funções do Rastreador de Tempo
 function updateTimer() {
@@ -225,16 +287,19 @@ function resetTimer() {
 }
 
 async function saveTimeEntry(projectName, duration) {
-    if (!db || !userId || !appId) {
-        console.error("Firestore, userId ou appId não estão inicializados ou disponíveis.");
+    if (!db || !userId) {
+        console.error("Firestore ou userId não estão inicializados.");
         return;
     }
     const durationInSeconds = Math.floor(duration / 1000);
     try {
-        await addDoc(collection(db, `artifacts/${appId}/users/${userId}/timeEntries`), {
+        // A entrada de tempo da própria empresa é salva com seu ID como companyId.
+        await addDoc(collection(db, "timeEntries"), {
             projectName: projectName,
             duration: durationInSeconds,
             timestamp: new Date(),
+            companyId: userId,
+            memberId: null // Indica que a entrada é do admin da empresa, não de um colaborador.
         });
         console.log("Entrada de tempo salva com sucesso.");
     } catch (e) {
@@ -251,21 +316,40 @@ function formatDuration(seconds) {
     return `${h}:${m}:${s}`;
 }
 
-function renderTimeEntries(entries) {
+function renderTimeEntries(entries, membersMap) {
     timeEntriesList.innerHTML = '';
     entries.forEach(entry => {
         const entryElement = document.createElement('div');
         entryElement.className = 'flex items-center justify-between p-4 bg-gray-100 dark:bg-gray-800 rounded-lg shadow-sm';
+        
+        const memberName = entry.memberId ? (membersMap.get(entry.memberId) || 'Colaborador Desconhecido') : 'Empresa';
+        
         entryElement.innerHTML = `
             <div>
                 <p class="font-bold">${entry.projectName}</p>
-                <p class="text-sm text-gray-500 dark:text-gray-400">${new Date(entry.timestamp.seconds * 1000).toLocaleDateString()} - Duração: ${formatDuration(entry.duration)}</p>
+                <p class="text-sm text-gray-500 dark:text-gray-400">${new Date(entry.timestamp.seconds * 1000).toLocaleDateString()} - Duração: ${formatDuration(entry.duration)} <span class="font-semibold text-blue-400">(${memberName})</span></p>
             </div>
             <div class="flex space-x-2">
                 <button class="edit-button text-blue-500 hover:text-blue-700 transition-colors" data-id="${entry.id}"><i class="fas fa-edit"></i></button>
                 <button class="delete-button text-red-500 hover:text-red-700 transition-colors" data-id="${entry.id}"><i class="fas fa-trash"></i></button>
             </div>
         `;
+
+        // Adiciona os event listeners diretamente aos botões criados
+        const editButton = entryElement.querySelector('.edit-button');
+        const deleteButton = entryElement.querySelector('.delete-button');
+
+        editButton.addEventListener('click', () => {
+            openEditModal(entry.id);
+        });
+
+        deleteButton.addEventListener('click', async () => {
+            const confirmed = await showMessageModal("Tem certeza que deseja excluir esta entrada de tempo?", 'confirm');
+            if (confirmed) {
+                deleteTimeEntry(entry.id);
+            }
+        });
+
         timeEntriesList.appendChild(entryElement);
     });
 }
@@ -322,47 +406,82 @@ function updateChart(data) {
     });
 }
 
+function renderCurrentPage() {
+    const totalEntries = allTimeEntries.length;
+    if (totalEntries === 0) {
+        timeEntriesList.innerHTML = '<p class="text-center text-gray-500">Nenhuma entrada de tempo encontrada.</p>';
+        paginationControls.classList.add('hidden');
+        return;
+    }
+    
+    const totalPages = Math.ceil(totalEntries / pageSize);
+
+    // Garante que a página atual não seja inválida após a exclusão de itens
+    if (currentPage > totalPages) {
+        currentPage = totalPages;
+    }
+    if (currentPage < 1) {
+        currentPage = 1;
+    }
+
+    const startIndex = (currentPage - 1) * pageSize;
+    const pageEntries = allTimeEntries.slice(startIndex, startIndex + pageSize);
+
+    renderTimeEntries(pageEntries, membersMap);
+
+    // Atualiza os controles de paginação
+    paginationControls.classList.toggle('hidden', totalEntries <= pageSize);
+    prevPageButton.disabled = currentPage === 1;
+    nextPageButton.disabled = currentPage >= totalPages;
+}
+
 // Funções do Firebase
 async function setupTimeEntriesListener() {
-    if (!db || !userId || !appId) {
+    if (!db || !userId) {
         console.error("Firestore não está pronto para o listener.");
         return;
     }
+    // Uma empresa/usuário logado vê as entradas de todos os seus funcionários
     const q = query(
-        collection(db, `artifacts/${appId}/users/${userId}/timeEntries`),
+        collection(db, `timeEntries`),
+        where("companyId", "==", userId),
         orderBy("timestamp", "desc")
     );
 
-    onSnapshot(q, (snapshot) => {
-        let entries = [];
-        snapshot.forEach(doc => {
-            entries.push({ id: doc.id, ...doc.data() });
+    onSnapshot(q, async (snapshot) => {
+        const membersQuery = query(collection(db, 'members'), where('companyId', '==', userId));
+        const membersSnapshot = await getDocs(membersQuery);
+        membersMap.clear();
+        membersSnapshot.forEach(doc => {
+            membersMap.set(doc.id, doc.data().name);
         });
 
-        // Re-organiza a paginação e renderiza
-        const totalEntries = entries.length;
-        const startIndex = (currentPage - 1) * pageSize;
-        const endIndex = startIndex + pageSize;
-        const pageEntries = entries.slice(startIndex, endIndex);
+        if (snapshot.empty) {
+            allTimeEntries = [];
+            renderCurrentPage();
+            return;
+        }
 
-        renderTimeEntries(pageEntries);
+        allTimeEntries = [];
+        snapshot.forEach(doc => {
+            allTimeEntries.push({ id: doc.id, ...doc.data() });
+        });
 
-        // Atualiza os controles de paginação
-        paginationControls.classList.toggle('hidden', totalEntries <= pageSize);
-        prevPageButton.disabled = currentPage === 1;
-        nextPageButton.disabled = endIndex >= totalEntries;
+        renderCurrentPage(); // Chama a nova função para renderizar a página atual
+
     }, (error) => {
         console.error("Erro no onSnapshot:", error);
     });
 }
 
 async function setupRealtimeChart() {
-    if (!db || !userId || !appId) {
+    if (!db || !userId) {
         console.error("Firestore não está pronto para o listener do gráfico.");
         return;
     }
     const q = query(
-        collection(db, `artifacts/${appId}/users/${userId}/timeEntries`)
+        collection(db, `timeEntries`),
+        where("companyId", "==", userId)
     );
 
     onSnapshot(q, (snapshot) => {
@@ -385,31 +504,24 @@ async function setupRealtimeChart() {
 }
 
 // Funções de Edição e Exclusão
-timeEntriesList.addEventListener('click', async (e) => {
-    if (e.target.closest('.delete-button')) {
-        const id = e.target.closest('.delete-button').dataset.id;
-        try {
-            if (db && userId && appId) {
-                await deleteDoc(doc(db, `artifacts/${appId}/users/${userId}/timeEntries`, id));
-                showMessageModal("Entrada de tempo excluída com sucesso.");
-            }
-        } catch (error) {
-            console.error("Erro ao excluir documento:", error);
-            showMessageModal("Erro ao excluir a entrada. Tente novamente.");
-        }
-    }
-
-    if (e.target.closest('.edit-button')) {
-        const id = e.target.closest('.edit-button').dataset.id;
-        openEditModal(id);
-    }
-});
-
-async function openEditModal(id) {
-    if (!db || !userId || !appId) {
+async function deleteTimeEntry(id) {
+    if (!db || !userId) {
+        showMessageModal("Erro de autenticação. Não foi possível excluir.");
         return;
     }
-    const docRef = doc(db, `artifacts/${appId}/users/${userId}/timeEntries`, id);
+    try {
+        await deleteDoc(doc(db, `timeEntries`, id));
+        showMessageModal("Entrada de tempo excluída com sucesso.");
+    } catch (error) {
+        console.error("Erro ao excluir documento:", error);
+        showMessageModal("Erro ao excluir a entrada. Tente novamente.");
+    }
+}
+async function openEditModal(id) {
+    if (!db || !userId) {
+        return;
+    }
+    const docRef = doc(db, `timeEntries`, id);
     try {
         const docSnap = await getDoc(docRef);
         if (docSnap.exists()) {
@@ -440,25 +552,39 @@ async function openEditModal(id) {
 }
 
 async function saveEditedEntry() {
+    const saveButton = document.getElementById('save-edit-button');
+    const buttonText = saveButton.querySelector('.button-text');
+    const spinner = saveButton.querySelector('.button-spinner');
+
     const id = editEntryIdInput.value;
     const projectName = editProjectInput.value.trim();
     const dateStr = editDateInput.value;
     const hours = parseInt(editHoursInput.value) || 0;
     const minutes = parseInt(editMinutesInput.value) || 0;
     const seconds = parseInt(editSecondsInput.value) || 0;
-
+    
     if (!projectName || !dateStr) {
         showMessageModal("O nome do projeto e a data são obrigatórios.");
         return;
     }
 
+    // Desabilita o botão e mostra o spinner
+    saveButton.disabled = true;
+    buttonText.classList.add('hidden');
+    spinner.classList.remove('hidden');
+    spinner.style.display = 'inline-block';
+
     const totalDuration = hours * 3600 + minutes * 60 + seconds;
     const date = new Date(dateStr);
 
-    if (!db || !userId || !appId) {
+    if (!db || !userId) {
+        // Reabilita o botão em caso de erro prematuro
+        saveButton.disabled = false;
+        buttonText.classList.remove('hidden');
+        spinner.style.display = 'none';
         return;
     }
-    const docRef = doc(db, `artifacts/${appId}/users/${userId}/timeEntries`, id);
+    const docRef = doc(db, `timeEntries`, id);
     try {
         await updateDoc(docRef, {
             projectName: projectName,
@@ -470,6 +596,11 @@ async function saveEditedEntry() {
     } catch (error) {
         console.error("Erro ao atualizar documento:", error);
         showMessageModal("Erro ao salvar a edição. Tente novamente.");
+    } finally {
+        // Reabilita o botão e esconde o spinner
+        saveButton.disabled = false;
+        buttonText.classList.remove('hidden');
+        spinner.style.display = 'none';
     }
 }
 
@@ -479,12 +610,18 @@ stopButton.addEventListener('click', stopTimer);
 resetButton.addEventListener('click', resetTimer);
 saveEditButton.addEventListener('click', saveEditedEntry);
 cancelEditButton.addEventListener('click', () => editModal.classList.add('hidden'));
-messageOkButton.addEventListener('click', () => messageModal.classList.add('hidden'));
 
 // UI Interações
 menuToggle.addEventListener('click', () => {
     sidebar.classList.toggle('active');
     menuToggle.classList.toggle('active');
+    sidebarOverlay.classList.toggle('active');
+});
+
+sidebarOverlay.addEventListener('click', () => {
+    sidebar.classList.remove('active');
+    menuToggle.classList.remove('active');
+    sidebarOverlay.classList.remove('active');
 });
 
 themeToggle.addEventListener('click', () => {
@@ -585,9 +722,10 @@ registerForm.addEventListener('submit', async (e) => {
     const password = registerForm['register-password'].value;
 
     try {
-        await createUserWithEmailAndPassword(auth, email, password);
-        showMessageModal("Cadastro realizado com sucesso! Você já está logado.");
+        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+        await sendEmailVerification(userCredential.user);
         registerForm.reset();
+        showMessageModal("Cadastro realizado com sucesso! Um e-mail de verificação foi enviado para sua caixa de entrada.");
     } catch (error) {
         console.error("Erro no cadastro:", error);
         showMessageModal(`Erro no cadastro: ${error.message.replace('Firebase: ', '')}`);
@@ -603,15 +741,17 @@ logoutButton.addEventListener('click', async () => {
     }
 });
 
-// Paginação
 prevPageButton.addEventListener('click', () => {
     if (currentPage > 1) {
         currentPage--;
-        setupTimeEntriesListener();
+        renderCurrentPage();
     }
 });
 
 nextPageButton.addEventListener('click', () => {
-    currentPage++;
-    setupTimeEntriesListener();
+    const totalPages = Math.ceil(allTimeEntries.length / pageSize);
+    if (currentPage < totalPages) {
+        currentPage++;
+        renderCurrentPage();
+    }
 });
