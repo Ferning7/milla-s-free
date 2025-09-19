@@ -1,7 +1,7 @@
 import firebaseConfig from './FireBase.js';
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
 import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-import { getFirestore, collection, addDoc, query, where, onSnapshot, doc, deleteDoc, setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { getFirestore, collection, addDoc, query, where, onSnapshot, doc, deleteDoc, setLogLevel, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // Ativar logging para depuração
 setLogLevel('debug');
@@ -29,6 +29,14 @@ const messageModal = document.getElementById('message-modal');
 const messageText = document.getElementById('message-text');
 const messageOkButton = document.getElementById('message-ok');
 const messageCancelButton = document.getElementById('message-cancel');
+
+const editMemberModal = document.getElementById('edit-member-modal');
+const editMemberForm = document.getElementById('edit-member-form');
+const cancelEditMemberButton = document.getElementById('cancel-edit-member-button');
+const saveEditMemberButton = document.getElementById('save-edit-member-button');
+const editMemberIdInput = document.getElementById('edit-member-id');
+const editMemberNameInput = document.getElementById('edit-member-name');
+const editMemberEmailInput = document.getElementById('edit-member-email');
 
 // Funções de UI
 function showMessageModal(message, type = 'alert') {
@@ -123,7 +131,9 @@ function setupMembersListener() {
                         <input type="text" readonly value="${member.loginToken}" class="token-input bg-gray-700 border border-gray-600 rounded p-1 text-xs w-48 font-mono">
                     </div>
                     <button class="copy-token-button px-3 py-1 bg-blue-500 hover:bg-blue-600 text-white rounded-lg text-sm" data-token="${member.loginToken}">Copiar</button>
-                    <button class="delete-member-button text-red-500 hover:text-red-700" data-id="${doc.id}" data-name="${member.name || 'este colaborador'}"><i class="fas fa-trash"></i></button>
+                    <button title="Editar Colaborador" class="edit-member-button text-blue-500 hover:text-blue-700" data-id="${doc.id}" data-name="${member.name}" data-email="${member.email}"><i class="fas fa-edit"></i></button>
+                    <button title="Gerar Novo Token" class="regenerate-token-button text-yellow-500 hover:text-yellow-700" data-id="${doc.id}" data-name="${member.name || 'este colaborador'}"><i class="fas fa-sync-alt"></i></button>
+                    <button title="Excluir Colaborador" class="delete-member-button text-red-500 hover:text-red-700" data-id="${doc.id}" data-name="${member.name || 'este colaborador'}"><i class="fas fa-trash"></i></button>
                 </div>
             `;
             membersList.appendChild(memberElement);
@@ -182,8 +192,11 @@ createMemberForm.addEventListener('submit', async (e) => {
 
 // Lógica para copiar token
 membersList.addEventListener('click', async (e) => {
-    if (e.target.classList.contains('copy-token-button')) {
-        const token = e.target.dataset.token;
+    const button = e.target.closest('button');
+    if (!button) return;
+
+    if (button.classList.contains('copy-token-button')) {
+        const token = button.dataset.token;
         navigator.clipboard.writeText(token).then(() => {
             showMessageModal('Token copiado para a área de transferência!');
         }).catch(err => {
@@ -191,9 +204,8 @@ membersList.addEventListener('click', async (e) => {
             showMessageModal('Não foi possível copiar o token.');
         });
     }
-
-    if (e.target.closest('.delete-member-button')) {
-        const button = e.target.closest('.delete-member-button');
+    
+    if (button.classList.contains('delete-member-button')) {
         const memberId = button.dataset.id;
         const memberName = button.dataset.name;
         const confirmed = await showMessageModal(`Tem certeza que deseja excluir o colaborador "${memberName}"? Esta ação não pode ser desfeita.`, 'confirm');
@@ -203,8 +215,76 @@ membersList.addEventListener('click', async (e) => {
             }).catch(err => showMessageModal("Erro ao excluir colaborador."));
         }
     }
+    
+    if (button.classList.contains('regenerate-token-button')) {
+        const memberId = button.dataset.id;
+        const memberName = button.dataset.name;
+        const confirmed = await showMessageModal(`Tem certeza que deseja gerar um novo token para "${memberName}"? O token antigo deixará de funcionar.`, 'confirm');
+        if (confirmed) {
+            const newLoginToken = Math.random().toString(36).substring(2) + Date.now().toString(36);
+            const memberDocRef = doc(db, "members", memberId);
+            try {
+                await updateDoc(memberDocRef, { loginToken: newLoginToken });
+                showMessageModal(`Novo token gerado para ${memberName}. O novo token já está visível na lista.`);
+            } catch (error) {
+                console.error("Erro ao gerar novo token:", error);
+                showMessageModal("Erro ao gerar novo token. Tente novamente.");
+            }
+        }
+    }
+
+    if (button.classList.contains('edit-member-button')) {
+        const memberId = button.dataset.id;
+        const memberName = button.dataset.name;
+        const memberEmail = button.dataset.email;
+
+        editMemberIdInput.value = memberId;
+        editMemberNameInput.value = memberName;
+        editMemberEmailInput.value = memberEmail;
+
+        editMemberModal.classList.remove('hidden');
+    }
 });
 
+editMemberForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+
+    const memberId = editMemberIdInput.value;
+    const newName = editMemberNameInput.value.trim();
+    const newEmail = editMemberEmailInput.value.trim();
+
+    if (!memberId || !newName || !newEmail) {
+        showMessageModal("Todos os campos são obrigatórios.");
+        return;
+    }
+
+    const buttonText = saveEditMemberButton.querySelector('.button-text');
+    const spinner = saveEditMemberButton.querySelector('.button-spinner');
+
+    saveEditMemberButton.disabled = true;
+    buttonText.classList.add('hidden');
+    spinner.classList.remove('hidden');
+    spinner.style.display = 'inline-block';
+
+    const memberDocRef = doc(db, "members", memberId);
+
+    try {
+        await updateDoc(memberDocRef, { name: newName, email: newEmail });
+        editMemberModal.classList.add('hidden');
+        showMessageModal("Informações do colaborador atualizadas com sucesso.");
+    } catch (error) {
+        console.error("Erro ao atualizar colaborador:", error);
+        showMessageModal("Erro ao atualizar informações. Tente novamente.");
+    } finally {
+        saveEditMemberButton.disabled = false;
+        buttonText.classList.remove('hidden');
+        spinner.style.display = 'none';
+    }
+});
+
+cancelEditMemberButton.addEventListener('click', () => {
+    editMemberModal.classList.add('hidden');
+});
 
 // Iniciar a página
 document.addEventListener('DOMContentLoaded', initializeDashboard);

@@ -70,6 +70,31 @@
         </div>
     </div>
 
+    <!-- Modal de Editar Colaborador -->
+    <div id="edit-member-modal" class="fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center hidden z-50">
+        <div class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-xl w-full max-w-sm">
+            <h3 class="text-xl font-bold mb-4">Editar Colaborador</h3>
+            <form id="edit-member-form">
+                <input type="hidden" id="edit-member-id">
+                <div class="mb-4">
+                    <label for="edit-member-name" class="block text-sm font-medium mb-1">Nome do Colaborador</label>
+                    <input id="edit-member-name" type="text" required class="w-full p-2 rounded-lg bg-gray-200 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 focus:outline-none focus:border-blue-500">
+                </div>
+                <div class="mb-6">
+                    <label for="edit-member-email" class="block text-sm font-medium mb-1">Email do Colaborador</label>
+                    <input id="edit-member-email" type="email" required class="w-full p-2 rounded-lg bg-gray-200 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 focus:outline-none focus:border-blue-500">
+                </div>
+                <div class="flex justify-end space-x-4">
+                    <button type="button" id="cancel-edit-member-button" class="px-4 py-2 rounded-lg bg-gray-500 hover:bg-gray-600 text-white font-bold">Cancelar</button>
+                    <button type="submit" id="save-edit-member-button" class="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-bold w-24 text-center">
+                        <span class="button-text">Salvar</span>
+                        <i class="fas fa-spinner fa-spin hidden button-spinner"></i>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <!-- Modal de Mensagem -->
     <div id="message-modal" class="fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center hidden z-50 p-4">
         <div class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-xl w-full max-w-sm text-center">
