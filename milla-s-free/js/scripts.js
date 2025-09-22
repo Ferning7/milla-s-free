@@ -1,12 +1,13 @@
 import firebaseConfig from './FireBase.js';
 import { initThemeManager } from './theme-manager.js';
+import { showMessageModal } from './ui-helpers.js';
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
 import { getAuth, onAuthStateChanged, signOut, createUserWithEmailAndPassword, signInWithEmailAndPassword, sendPasswordResetEmail, sendEmailVerification } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 import { getFirestore, doc, getDoc, addDoc, setDoc, updateDoc, deleteDoc, onSnapshot, collection, query, where, orderBy, limit, startAfter, endBefore, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-// Ativar logging para depuração
-setLogLevel('debug');
+// Altere para 'warn' ou 'error' para reduzir os logs, ou comente a linha.
+setLogLevel('warn');
 
 // Variáveis globais do Firebase
 let app, auth, db;
@@ -81,42 +82,6 @@ const forgotPasswordForm = document.getElementById('forgot-password-form');
 const forgotEmailInput = document.getElementById('forgot-email');
 const cancelForgotButton = document.getElementById('cancel-forgot-button');
 const memberFilter = document.getElementById('member-filter');
-
-// Função para mostrar um modal de mensagem
-function showMessageModal(message, type = 'alert') {
-    return new Promise((resolve) => {
-        messageText.textContent = message;
-
-        if (type === 'confirm') {
-            messageOkButton.textContent = 'Confirmar';
-            messageCancelButton.classList.remove('hidden');
-        } else {
-            messageOkButton.textContent = 'OK';
-            messageCancelButton.classList.add('hidden');
-        }
-
-        messageModal.classList.remove('hidden');
-
-        const okListener = () => {
-            cleanup();
-            resolve(true);
-        };
-
-        const cancelListener = () => {
-            cleanup();
-            resolve(false);
-        };
-
-        const cleanup = () => {
-            messageModal.classList.add('hidden');
-            messageOkButton.removeEventListener('click', okListener);
-            messageCancelButton.removeEventListener('click', cancelListener);
-        };
-
-        messageOkButton.addEventListener('click', okListener, { once: true });
-        messageCancelButton.addEventListener('click', cancelListener, { once: true });
-    });
-}
 
 // Inicialização do Firebase
 async function initializeFirebase() {
@@ -729,15 +694,15 @@ closeShareModalButton.addEventListener('click', () => {
     shareModal.classList.add('hidden');
 });
 
-copyAppIdButton.addEventListener('click', () => {
+copyAppIdButton.addEventListener('click', async () => {
     const appIdText = appIdDisplay.textContent;
-    const tempInput = document.createElement('textarea');
-    tempInput.value = appIdText;
-    document.body.appendChild(tempInput);
-    tempInput.select();
-    document.execCommand('copy');
-    document.body.removeChild(tempInput);
-    showMessageModal("ID do aplicativo copiado!");
+    try {
+        await navigator.clipboard.writeText(appIdText);
+        showMessageModal("ID do aplicativo copiado!");
+    } catch (err) {
+        console.error('Erro ao copiar ID: ', err);
+        showMessageModal('Não foi possível copiar o ID.');
+    }
 });
 
 showLoginModalButton.addEventListener('click', () => {

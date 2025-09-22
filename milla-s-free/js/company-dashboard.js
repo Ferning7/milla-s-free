@@ -1,11 +1,12 @@
 import firebaseConfig from './FireBase.js';
 import { initThemeManager } from './theme-manager.js';
+import { showMessageModal } from './ui-helpers.js';
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
 import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-import { getFirestore, collection, addDoc, query, where, onSnapshot, doc, deleteDoc, setLogLevel, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { getFirestore, collection, addDoc, query, where, onSnapshot, doc, deleteDoc, setLogLevel, updateDoc, orderBy } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-// Ativar logging para depuração
-setLogLevel('debug');
+// Altere para 'warn' ou 'error' para reduzir os logs, ou comente a linha.
+setLogLevel('warn');
 // O tema é aplicado por initThemeManager
 
 // Variáveis globais
@@ -51,42 +52,6 @@ const cancelEditTaskButton = document.getElementById('cancel-edit-task-button');
 const saveEditTaskButton = document.getElementById('save-edit-task-button');
 const editTaskIdInput = document.getElementById('edit-task-id');
 const editTaskNameInput = document.getElementById('edit-task-name');
-
-// Funções de UI
-function showMessageModal(message, type = 'alert') {
-    return new Promise((resolve) => {
-        messageText.textContent = message;
-
-        if (type === 'confirm') {
-            messageOkButton.textContent = 'Confirmar';
-            messageCancelButton.classList.remove('hidden');
-        } else {
-            messageOkButton.textContent = 'OK';
-            messageCancelButton.classList.add('hidden');
-        }
-
-        messageModal.classList.remove('hidden');
-
-        const okListener = () => {
-            cleanup();
-            resolve(true);
-        };
-
-        const cancelListener = () => {
-            cleanup();
-            resolve(false);
-        };
-
-        const cleanup = () => {
-            messageModal.classList.add('hidden');
-            messageOkButton.removeEventListener('click', okListener);
-            messageCancelButton.removeEventListener('click', cancelListener);
-        };
-
-        messageOkButton.addEventListener('click', okListener, { once: true });
-        messageCancelButton.addEventListener('click', cancelListener, { once: true });
-    });
-}
 
 messageOkButton.addEventListener('click', () => messageModal.classList.add('hidden'));
 
@@ -230,10 +195,12 @@ function setupTasksListener() {
     const q = query(collection(db, "tasks"), where("companyId", "==", userId), orderBy("name"));
 
     onSnapshot(q, (snapshot) => {
+        console.log(`[setupTasksListener] Snapshot recebido para tarefas. Total: ${snapshot.size} tarefas.`);
         tasksList.innerHTML = '';
         allTasks = []; // Limpa a lista antes de preencher
         if (snapshot.empty) {
             tasksList.innerHTML = '<p class="text-center text-gray-500 text-sm">Nenhuma tarefa pré-definida.</p>';
+            console.log("[setupTasksListener] Nenhuma tarefa encontrada para esta empresa.");
             return;
         }
         snapshot.forEach(doc => {
@@ -241,22 +208,25 @@ function setupTasksListener() {
             allTasks.push({ id: doc.id, ...task });
             const taskElement = document.createElement('div');
             taskElement.className = 'bg-white dark:bg-gray-800 p-3 rounded-lg flex justify-between items-center';
-            taskElement.innerHTML = `
-                <span>${task.name}</span>
-                <div class="flex items-center gap-2">
-                    <button title="Editar Tarefa" class="edit-task-button text-blue-500 hover:bg-gray-200 dark:hover:bg-gray-700 p-2 rounded-full transition-colors" data-id="${doc.id}" data-name="${task.name}">
-                        <i class="fas fa-edit"></i>
-                    </button>
-                    <button title="Excluir Tarefa" class="delete-task-button text-red-500 hover:bg-gray-200 dark:hover:bg-gray-700 p-2 rounded-full transition-colors" data-id="${doc.id}" data-name="${task.name}">
-                        <i class="fas fa-trash"></i>
-                    </button>
-                </div>
+
+            const taskNameSpan = document.createElement('span');
+            taskNameSpan.textContent = task.name; // Usar textContent para segurança
+            taskElement.appendChild(taskNameSpan);
+
+            const buttonsDiv = document.createElement('div');
+            buttonsDiv.className = 'flex items-center gap-2';
+            buttonsDiv.innerHTML = `
+                <button title="Editar Tarefa" class="edit-task-button text-blue-500 hover:bg-gray-200 dark:hover:bg-gray-700 p-2 rounded-full transition-colors" data-id="${doc.id}" data-name="${task.name}"><i class="fas fa-edit"></i></button>
+                <button title="Excluir Tarefa" class="delete-task-button text-red-500 hover:bg-gray-200 dark:hover:bg-gray-700 p-2 rounded-full transition-colors" data-id="${doc.id}" data-name="${task.name}"><i class="fas fa-trash"></i></button>
             `;
+            taskElement.appendChild(buttonsDiv);
+
             tasksList.appendChild(taskElement);
+            console.log(`[setupTasksListener] Tarefa "${task.name}" adicionada ao DOM.`);
         });
     }, (error) => {
         console.error("Erro ao buscar tarefas:", error);
-        tasksList.innerHTML = '<p class="text-center text-red-500">Erro ao carregar tarefas.</p>';
+        tasksList.innerHTML = '<p class="text-center text-red-500 text-sm">Erro ao carregar tarefas.</p>';
     });
 }
 

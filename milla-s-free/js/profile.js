@@ -65,6 +65,7 @@ async function initializeProfilePage() {
 
                     // Configura listeners
                     setupTimeEntriesListener();
+                    setupTasksDatalist(memberProfile.companyId);
                     setupRealtimeChart();
                 } else {
                     showMessageModal("Seu perfil de colaborador não foi encontrado.");
@@ -279,6 +280,23 @@ function setupRealtimeChart() {
             }
         });
         updateChart(allProjects);
+    });
+}
+
+function setupTasksDatalist(companyId) {
+    if (!db) return;
+    const tasksDatalist = document.getElementById('tasks-datalist');
+    if (!tasksDatalist) {
+        console.warn('Elemento <datalist id="tasks-datalist"> não encontrado.');
+        return;
+    }
+
+    const q = query(collection(db, "tasks"), where("companyId", "==", companyId), orderBy("name"));
+    onSnapshot(q, (snapshot) => {
+        tasksDatalist.innerHTML = '';
+        snapshot.forEach(doc => {
+            tasksDatalist.innerHTML += `<option value="${doc.data().name}"></option>`;
+        });
     });
 }
 

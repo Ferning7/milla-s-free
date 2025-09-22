@@ -1,5 +1,6 @@
 import firebaseConfig from './FireBase.js';
 import { applyTheme } from './theme-manager.js';
+import { showMessageModal } from './ui-helpers.js';
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
 import { getAuth, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-functions.js";
@@ -15,13 +16,6 @@ const exchangeTokenForAuth = httpsCallable(functions, 'exchangeToken');
 const memberLoginForm = document.getElementById('member-login-form');
 const loginTokenInput = document.getElementById('login-token');
 const messageModal = document.getElementById('message-modal');
-const messageText = document.getElementById('message-text');
-const messageOkButton = document.getElementById('message-ok');
-
-function showMessageModal(message) {
-    messageText.textContent = message;
-    messageModal.classList.remove('hidden');
-}
 
 messageOkButton.addEventListener('click', () => messageModal.classList.add('hidden'));
 
