@@ -22,6 +22,7 @@ let startTime = null;
 let timerInterval = null;
 let projectToStart = '';
 let currentPage = 1;
+let allTasks = []; // Armazena a lista completa de tarefas
 let chartInstance = null;
 let allProjects = {}; 
 let allTimeEntries = []; // Array para armazenar todas as entradas de tempo
@@ -81,6 +82,11 @@ const forgotPasswordModal = document.getElementById('forgot-password-modal');
 const forgotPasswordForm = document.getElementById('forgot-password-form');
 const forgotEmailInput = document.getElementById('forgot-email');
 const cancelForgotButton = document.getElementById('cancel-forgot-button');
+const taskSelectionModal = document.getElementById('task-selection-modal');
+const existingTasksList = document.getElementById('existing-tasks-list');
+const newTaskInput = document.getElementById('new-task-input');
+const startTimerConfirmButton = document.getElementById('start-timer-confirm-button');
+const cancelTaskSelectionButton = document.getElementById('cancel-task-selection-button');
 const memberFilter = document.getElementById('member-filter');
 
 // Inicialização do Firebase
@@ -116,6 +122,7 @@ async function initializeFirebase() {
                     // Inicializa listeners
                     setupTimeEntriesListener();
                     setupRealtimeChart();
+                    setupTasksListener();
                     updateVerificationStatus(user);
                 } else {
                     // Usuário está deslogado
@@ -200,27 +207,42 @@ function updateTimer() {
     timerDisplay.textContent = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
 }
 
-async function startTimer() {
-    if (isRunning) {
-        showMessageModal("O rastreador já está em andamento.");
-        return;
-    }
-
-    const projectName = projectInput.value.trim();
-    if (projectName === "") {
-        showMessageModal("Por favor, insira o nome do projeto ou tarefa.");
-        return;
-    }
-
+function _startTimerWithTask(taskName) {
     isRunning = true;
     startTime = Date.now();
-    projectToStart = projectName;
+    projectToStart = taskName;
+    projectInput.value = taskName; // Atualiza o input principal para exibição
 
     timerInterval = setInterval(updateTimer, 1000);
     startButton.classList.add('timer-active');
     stopButton.disabled = false;
     startButton.disabled = true;
     resetButton.disabled = false;
+}
+
+async function openTaskSelectionModal() {
+    if (isRunning) {
+        showMessageModal("O rastreador já está em andamento.");
+        return;
+    }
+    populateTaskSelectionModal(allTasks);
+    taskSelectionModal.classList.remove('hidden');
+}
+
+function populateTaskSelectionModal(tasks) {
+    existingTasksList.innerHTML = '';
+    newTaskInput.value = ''; // Limpa o campo de nova tarefa
+    if (tasks.length === 0) {
+        existingTasksList.innerHTML = '<p class="p-3 text-center text-sm text-gray-500">Nenhuma tarefa pré-definida.</p>';
+    } else {
+        tasks.forEach(task => {
+            const taskElement = document.createElement('div');
+            taskElement.className = 'p-3 text-left cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md';
+            taskElement.textContent = task.name;
+            taskElement.dataset.taskName = task.name;
+            existingTasksList.appendChild(taskElement);
+        });
+    }
 }
 
 async function stopTimer() {
@@ -548,6 +570,18 @@ async function setupRealtimeChart() {
     });
 }
 
+async function setupTasksListener() {
+    if (!db || !userId) return;
+
+    const q = query(collection(db, "tasks"), where("companyId", "==", userId), orderBy("name"));
+    onSnapshot(q, (snapshot) => {
+        allTasks = [];
+        snapshot.forEach(doc => {
+            allTasks.push({ id: doc.id, ...doc.data() });
+        });
+    });
+}
+
 // Funções de Edição e Exclusão
 async function deleteTimeEntry(id) {
     if (!db || !userId) {
@@ -650,7 +684,7 @@ async function saveEditedEntry() {
 }
 
 // Event Listeners
-startButton.addEventListener('click', startTimer);
+startButton.addEventListener('click', openTaskSelectionModal);
 stopButton.addEventListener('click', stopTimer);
 resetButton.addEventListener('click', resetTimer);
 saveEditButton.addEventListener('click', saveEditedEntry);
@@ -660,6 +694,27 @@ memberFilter.addEventListener('change', () => {
     selectedMemberId = memberFilter.value;
     currentPage = 1; // Reseta para a primeira página ao mudar o filtro
     renderCurrentPage();
+});
+
+cancelTaskSelectionButton.addEventListener('click', () => {
+    taskSelectionModal.classList.add('hidden');
+});
+
+existingTasksList.addEventListener('click', (e) => {
+    if (e.target && e.target.dataset.taskName) {
+        newTaskInput.value = e.target.dataset.taskName;
+        // Opcional: adicionar um feedback visual para a tarefa selecionada
+    }
+});
+
+startTimerConfirmButton.addEventListener('click', () => {
+    const selectedTask = newTaskInput.value.trim();
+    if (selectedTask === "") {
+        showMessageModal("Por favor, selecione ou digite uma tarefa.");
+        return;
+    }
+    taskSelectionModal.classList.add('hidden');
+    _startTimerWithTask(selectedTask);
 });
 
 // UI Interações
