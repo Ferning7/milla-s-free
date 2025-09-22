@@ -1,90 +1,55 @@
 import firebaseConfig from './FireBase.js';
 import { initThemeManager } from './theme-manager.js';
-import { showMessageModal } from './ui-helpers.js';
+import { showMessageModal, toggleButtonLoading } from './ui-helpers.js';
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
 import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 import { getFirestore, collection, addDoc, query, where, onSnapshot, doc, deleteDoc, setLogLevel, updateDoc, orderBy } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-// Altere para 'warn' ou 'error' para reduzir os logs, ou comente a linha.
 setLogLevel('warn');
-// O tema é aplicado por initThemeManager
 
-// Variáveis globais
 let app, auth, db;
 let userId;
-let allMembers = []; // Armazena a lista completa de colaboradores
-let allTasks = []; // Armazena a lista completa de tarefas
+let allMembers = [];
+let allTasks = [];
 let membersCurrentPage = 1;
 const membersPageSize = 5;
+ 
+let companyEmailDisplay, addMemberButton, membersList, createMemberModal, createMemberForm, cancelCreateMemberButton,
+    editMemberModal, editMemberForm, cancelEditMemberButton, saveEditMemberButton, editMemberIdInput, editMemberNameInput,
+    editMemberEmailInput, themeToggle, searchMemberInput, membersPaginationControls, prevMembersPageButton, nextMembersPageButton,
+    addTaskForm, newTaskNameInput, tasksList, editTaskModal, editTaskForm, cancelEditTaskButton, saveEditTaskButton,
+    editTaskIdInput, editTaskNameInput;
+ 
+function initUIElements() {
+    companyEmailDisplay = document.getElementById('company-email-display');
+    addMemberButton = document.getElementById('add-member-button');
+    membersList = document.getElementById('members-list');
+    createMemberModal = document.getElementById('create-member-modal');
+    createMemberForm = document.getElementById('create-member-form');
+    cancelCreateMemberButton = document.getElementById('cancel-create-member-button');
+    editMemberModal = document.getElementById('edit-member-modal');
+    editMemberForm = document.getElementById('edit-member-form');
+    cancelEditMemberButton = document.getElementById('cancel-edit-member-button');
+    saveEditMemberButton = document.getElementById('save-edit-member-button');
+    editMemberIdInput = document.getElementById('edit-member-id');
+    editMemberNameInput = document.getElementById('edit-member-name');
+    editMemberEmailInput = document.getElementById('edit-member-email');
+    themeToggle = document.getElementById('theme-toggle');
+    searchMemberInput = document.getElementById('search-member-input');
+    membersPaginationControls = document.getElementById('members-pagination-controls');
+    prevMembersPageButton = document.getElementById('prev-members-page-button');
+    nextMembersPageButton = document.getElementById('next-members-page-button');
+    addTaskForm = document.getElementById('add-task-form');
+    newTaskNameInput = document.getElementById('new-task-name');
+    tasksList = document.getElementById('tasks-list');
+    editTaskModal = document.getElementById('edit-task-modal');
+    editTaskForm = document.getElementById('edit-task-form');
+    cancelEditTaskButton = document.getElementById('cancel-edit-task-button');
+    saveEditTaskButton = document.getElementById('save-edit-task-button');
+    editTaskIdInput = document.getElementById('edit-task-id');
+    editTaskNameInput = document.getElementById('edit-task-name');
+}
 
-// Elementos da UI
-const companyEmailDisplay = document.getElementById('company-email-display');
-const addMemberButton = document.getElementById('add-member-button');
-const membersList = document.getElementById('members-list');
-const createMemberModal = document.getElementById('create-member-modal');
-const createMemberForm = document.getElementById('create-member-form');
-const cancelCreateMemberButton = document.getElementById('cancel-create-member-button');
-const messageModal = document.getElementById('message-modal');
-const messageText = document.getElementById('message-text');
-const messageOkButton = document.getElementById('message-ok');
-const messageCancelButton = document.getElementById('message-cancel');
-
-const editMemberModal = document.getElementById('edit-member-modal');
-const editMemberForm = document.getElementById('edit-member-form');
-const cancelEditMemberButton = document.getElementById('cancel-edit-member-button');
-const saveEditMemberButton = document.getElementById('save-edit-member-button');
-const editMemberIdInput = document.getElementById('edit-member-id');
-const editMemberNameInput = document.getElementById('edit-member-name');
-const editMemberEmailInput = document.getElementById('edit-member-email');
-const themeToggle = document.getElementById('theme-toggle');
-const searchMemberInput = document.getElementById('search-member-input');
-const membersPaginationControls = document.getElementById('members-pagination-controls');
-const prevMembersPageButton = document.getElementById('prev-members-page-button');
-const nextMembersPageButton = document.getElementById('next-members-page-button');
-
-const addTaskForm = document.getElementById('add-task-form');
-const newTaskNameInput = document.getElementById('new-task-name');
-const tasksList = document.getElementById('tasks-list');
-
-const editTaskModal = document.getElementById('edit-task-modal');
-const editTaskForm = document.getElementById('edit-task-form');
-const cancelEditTaskButton = document.getElementById('cancel-edit-task-button');
-const saveEditTaskButton = document.getElementById('save-edit-task-button');
-const editTaskIdInput = document.getElementById('edit-task-id');
-const editTaskNameInput = document.getElementById('edit-task-name');
-
-messageOkButton.addEventListener('click', () => messageModal.classList.add('hidden'));
-
-addMemberButton.addEventListener('click', () => createMemberModal.classList.remove('hidden'));
-cancelCreateMemberButton.addEventListener('click', () => createMemberModal.classList.add('hidden'));
-
-addTaskForm.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const taskName = newTaskNameInput.value.trim();
-    if (taskName && userId) {
-        // Validação para impedir tarefas duplicadas (case-insensitive)
-        const isDuplicate = allTasks.some(task => task.name.toLowerCase() === taskName.toLowerCase());
-        if (isDuplicate) {
-            showMessageModal(`A tarefa "${taskName}" já existe.`);
-            return;
-        }
-
-        try {
-            await addDoc(collection(db, "tasks"), {
-                name: taskName,
-                companyId: userId,
-                createdAt: new Date()
-            });
-        } catch (error) {
-            console.error("Erro ao adicionar tarefa:", error);
-            showMessageModal("Não foi possível adicionar a tarefa.");
-        } finally {
-            newTaskNameInput.value = '';
-        }
-    }
-});
-
-// Inicialização
 async function initializeDashboard() {
     app = initializeApp(firebaseConfig);
     auth = getAuth(app);
@@ -97,8 +62,7 @@ async function initializeDashboard() {
             setupMembersListener();
             setupTasksListener();
         } else {
-            // Se não estiver logado, redireciona para a página inicial
-            window.location.href = 'index.html';
+            window.location.href = '../index.html';
         }
     });
 }
@@ -112,16 +76,24 @@ function renderMembers() {
 
     membersList.innerHTML = '';
 
+    const setPlaceholder = (element, message) => {
+        element.innerHTML = '';
+        const p = document.createElement('p');
+        p.className = 'text-center text-gray-500';
+        p.textContent = message;
+        element.appendChild(p);
+    };
+
     if (filteredMembers.length === 0) {
         if (searchTerm) {
-            membersList.innerHTML = `<p class="text-center text-gray-500">Nenhum colaborador encontrado para "${searchTerm}".</p>`;
+            setPlaceholder(membersList, `Nenhum colaborador encontrado para "${searchTerm}".`);
         } else {
-            membersList.innerHTML = '<p class="text-center text-gray-500">Nenhum colaborador cadastrado.</p>';
+            setPlaceholder(membersList, 'Nenhum colaborador cadastrado.');
         }
         membersPaginationControls.classList.add('hidden');
         return;
     }
-
+    
     const totalPages = Math.ceil(filteredMembers.length / membersPageSize);
     if (membersCurrentPage > totalPages) {
         membersCurrentPage = totalPages;
@@ -136,31 +108,58 @@ function renderMembers() {
     pageMembers.forEach(member => {
         const memberElement = document.createElement('div');
         memberElement.className = 'bg-white dark:bg-gray-800 p-4 rounded-lg flex justify-between items-center';
-        memberElement.innerHTML = `
-            <div>
-                <p class="font-bold text-lg">${member.name}</p>
-                <p class="text-sm text-gray-400">${member.email}</p>
-            </div>
-            <div class="flex items-center gap-4">
-                <div class="relative">
-                    <input type="text" readonly value="${member.loginToken}" class="token-input bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded p-1 text-xs w-48 font-mono select-all">
-                </div>
-                <button class="copy-token-button px-3 py-1 bg-blue-500 hover:bg-blue-600 text-white rounded-lg text-sm" data-token="${member.loginToken}">Copiar</button>
-                <button title="Editar Colaborador" class="edit-member-button text-blue-500 hover:bg-gray-200 dark:hover:bg-gray-700 p-2 rounded-full transition-colors" data-id="${member.id}" data-name="${member.name}" data-email="${member.email}"><i class="fas fa-edit"></i></button>
-                <button title="Gerar Novo Token" class="regenerate-token-button text-yellow-500 hover:bg-gray-200 dark:hover:bg-gray-700 p-2 rounded-full transition-colors" data-id="${member.id}" data-name="${member.name || 'este colaborador'}"><i class="fas fa-sync-alt"></i></button>
-                <button title="Excluir Colaborador" class="delete-member-button text-red-500 hover:bg-gray-200 dark:hover:bg-gray-700 p-2 rounded-full transition-colors" data-id="${member.id}" data-name="${member.name || 'este colaborador'}"><i class="fas fa-trash"></i></button>
-            </div>
-        `;
+
+        const infoDiv = document.createElement('div');
+        const nameP = document.createElement('p');
+        nameP.className = 'font-bold text-lg';
+        nameP.textContent = member.name;
+        const emailP = document.createElement('p');
+        emailP.className = 'text-sm text-gray-400';
+        emailP.textContent = member.email;
+        infoDiv.append(nameP, emailP);
+
+        const actionsDiv = document.createElement('div');
+        actionsDiv.className = 'flex items-center gap-4';
+
+        const tokenContainer = document.createElement('div');
+        tokenContainer.className = 'relative';
+        const tokenInput = document.createElement('input');
+        tokenInput.type = 'text';
+        tokenInput.readOnly = true;
+        tokenInput.value = member.loginToken;
+        tokenInput.className = 'token-input bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded p-1 text-xs w-48 font-mono select-all';
+        tokenContainer.appendChild(tokenInput);
+
+        const copyButton = document.createElement('button');
+        copyButton.className = 'copy-token-button px-3 py-1 bg-blue-500 hover:bg-blue-600 text-white rounded-lg text-sm';
+        copyButton.dataset.token = member.loginToken;
+        copyButton.textContent = 'Copiar';
+
+        const createIconButton = (title, classes, data, iconClasses) => {
+            const button = document.createElement('button');
+            button.title = title;
+            button.className = classes;
+            Object.entries(data).forEach(([key, value]) => button.dataset[key] = value);
+            const icon = document.createElement('i');
+            icon.className = iconClasses;
+            button.appendChild(icon);
+            return button;
+        };
+
+        const editButton = createIconButton('Editar Colaborador', 'edit-member-button text-blue-500 hover:bg-gray-200 dark:hover:bg-gray-700 p-2 rounded-full transition-colors', { id: member.id, name: member.name, email: member.email }, 'fas fa-edit');
+        const regenerateButton = createIconButton('Gerar Novo Token', 'regenerate-token-button text-yellow-500 hover:bg-gray-200 dark:hover:bg-gray-700 p-2 rounded-full transition-colors', { id: member.id, name: member.name || 'este colaborador' }, 'fas fa-sync-alt');
+        const deleteButton = createIconButton('Excluir Colaborador', 'delete-member-button text-red-500 hover:bg-gray-200 dark:hover:bg-gray-700 p-2 rounded-full transition-colors', { id: member.id, name: member.name || 'este colaborador' }, 'fas fa-trash');
+
+        actionsDiv.append(tokenContainer, copyButton, editButton, regenerateButton, deleteButton);
+        memberElement.append(infoDiv, actionsDiv);
         membersList.appendChild(memberElement);
     });
 
-    // Atualiza os controles de paginação
     membersPaginationControls.classList.toggle('hidden', filteredMembers.length <= membersPageSize);
     prevMembersPageButton.disabled = membersCurrentPage === 1;
     nextMembersPageButton.disabled = membersCurrentPage >= totalPages;
 }
 
-// Listener para a lista de colaboradores
 function setupMembersListener() {
     if (!db || !userId) {
         console.error("DB ou UserID não disponível para setupMembersListener.");
@@ -168,7 +167,12 @@ function setupMembersListener() {
     }
 
     console.log(`Configurando listener para companyId: ${userId}`);
-    membersList.innerHTML = '<p class="text-center text-gray-500">Carregando colaboradores...</p>';
+    
+    const loadingP = document.createElement('p');
+    loadingP.className = 'text-center text-gray-500';
+    loadingP.textContent = 'Carregando colaboradores...';
+    membersList.innerHTML = '';
+    membersList.appendChild(loadingP);
 
     const q = query(collection(db, "members"), where("companyId", "==", userId));
 
@@ -178,17 +182,19 @@ function setupMembersListener() {
         snapshot.forEach(doc => {
             allMembers.push({ id: doc.id, ...doc.data() });
         });
-        // Ordena a lista de membros por nome
         allMembers.sort((a, b) => a.name.localeCompare(b.name));
-        renderMembers(); // Renderiza a lista (filtrada ou não)
+        renderMembers();
     }, (error) => {
         console.error("Erro ao buscar colaboradores:", error);
-        membersList.innerHTML = '<p class="text-center text-red-500">Erro ao carregar colaboradores. Verifique o console para mais detalhes.</p>';
+        const errorP = document.createElement('p');
+        errorP.className = 'text-center text-red-500';
+        errorP.textContent = 'Erro ao carregar colaboradores. Verifique o console para mais detalhes.';
+        membersList.innerHTML = '';
+        membersList.appendChild(errorP);
         showMessageModal("Ocorreu um erro ao buscar os colaboradores. Verifique se as regras de segurança do Firestore permitem a leitura da coleção 'members'.");
     });
 }
 
-// Listener para a lista de tarefas
 function setupTasksListener() {
     if (!db || !userId) return;
 
@@ -197,9 +203,13 @@ function setupTasksListener() {
     onSnapshot(q, (snapshot) => {
         console.log(`[setupTasksListener] Snapshot recebido para tarefas. Total: ${snapshot.size} tarefas.`);
         tasksList.innerHTML = '';
-        allTasks = []; // Limpa a lista antes de preencher
+        allTasks = [];
         if (snapshot.empty) {
-            tasksList.innerHTML = '<p class="text-center text-gray-500 text-sm">Nenhuma tarefa pré-definida.</p>';
+            const p = document.createElement('p');
+            p.className = 'text-center text-gray-500 text-sm';
+            p.textContent = 'Nenhuma tarefa pré-definida.';
+            tasksList.innerHTML = '';
+            tasksList.appendChild(p);
             console.log("[setupTasksListener] Nenhuma tarefa encontrada para esta empresa.");
             return;
         }
@@ -210,19 +220,33 @@ function setupTasksListener() {
             taskElement.className = 'bg-white dark:bg-gray-800 p-3 rounded-lg flex justify-between items-center';
 
             const taskNameSpan = document.createElement('span');
-            taskNameSpan.textContent = task.name; // Usar textContent para segurança
+            taskNameSpan.textContent = task.name;
             taskElement.appendChild(taskNameSpan);
 
             const buttonsDiv = document.createElement('div');
-            buttonsDiv.className = 'flex items-center gap-2';
-            buttonsDiv.innerHTML = `
-                <button title="Editar Tarefa" class="edit-task-button text-blue-500 hover:bg-gray-200 dark:hover:bg-gray-700 p-2 rounded-full transition-colors" data-id="${doc.id}" data-name="${task.name}"><i class="fas fa-edit"></i></button>
-                <button title="Excluir Tarefa" class="delete-task-button text-red-500 hover:bg-gray-200 dark:hover:bg-gray-700 p-2 rounded-full transition-colors" data-id="${doc.id}" data-name="${task.name}"><i class="fas fa-trash"></i></button>
-            `;
+            buttonsDiv.className = 'flex items-center gap-2'; 
+            const editButton = document.createElement('button');
+            editButton.title = 'Editar Tarefa';
+            editButton.className = 'edit-task-button text-blue-500 hover:bg-gray-200 dark:hover:bg-gray-700 p-2 rounded-full transition-colors';
+            editButton.dataset.id = doc.id;
+            editButton.dataset.name = task.name;
+            const editIcon = document.createElement('i');
+            editIcon.className = 'fas fa-edit';
+            editButton.appendChild(editIcon);
+
+            const deleteButton = document.createElement('button');
+            deleteButton.title = 'Excluir Tarefa';
+            deleteButton.className = 'delete-task-button text-red-500 hover:bg-gray-200 dark:hover:bg-gray-700 p-2 rounded-full transition-colors';
+            deleteButton.dataset.id = doc.id;
+            deleteButton.dataset.name = task.name;
+            const deleteIcon = document.createElement('i');
+            deleteIcon.className = 'fas fa-trash';
+            deleteButton.appendChild(deleteIcon);
+
+            buttonsDiv.append(editButton, deleteButton);
             taskElement.appendChild(buttonsDiv);
 
             tasksList.appendChild(taskElement);
-            console.log(`[setupTasksListener] Tarefa "${task.name}" adicionada ao DOM.`);
         });
     }, (error) => {
         console.error("Erro ao buscar tarefas:", error);
@@ -230,259 +254,262 @@ function setupTasksListener() {
     });
 }
 
-// Lógica para adicionar colaborador
-createMemberForm.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    if (!userId) {
-        showMessageModal("Erro de autenticação. Por favor, faça login novamente.");
-        return;
-    }
-
-    const submitButton = document.getElementById('submit-create-member');
-    const buttonText = submitButton.querySelector('.button-text');
-    const spinner = submitButton.querySelector('.button-spinner');
-
-    submitButton.disabled = true;
-    buttonText.classList.add('hidden');
-    spinner.classList.remove('hidden');
-    spinner.style.display = 'inline-block';
-
-    const memberName = createMemberForm['member-name'].value;
-    const memberEmail = createMemberForm['member-email'].value;
-
-    // Gera um token "vitalício" simples e aleatório
-    const loginToken = Math.random().toString(36).substring(2) + Date.now().toString(36);
-
-    try {
-        await addDoc(collection(db, "members"), {
-            name: memberName,
-            email: memberEmail,
-            companyId: userId,
-            loginToken: loginToken,
-            createdAt: new Date()
-        });
-
-        createMemberModal.classList.add('hidden');
-        createMemberForm.reset();
-        showMessageModal(`Colaborador adicionado! O token de acesso é: ${loginToken}. Copie e envie para o colaborador.`);
-    } catch (error) {
-        console.error("Erro ao adicionar colaborador:", error);
-        showMessageModal("Erro ao adicionar colaborador. Tente novamente.");
-    } finally {
-        submitButton.disabled = false;
-        buttonText.classList.remove('hidden');
-        spinner.style.display = 'none';
-    }
-});
-
-// Lógica para copiar token
-membersList.addEventListener('click', async (e) => {
-    const button = e.target.closest('button');
-    if (!button) return;
-
-    if (button.classList.contains('copy-token-button')) {
-        const token = button.dataset.token;
-        navigator.clipboard.writeText(token).then(() => {
-            showMessageModal('Token copiado para a área de transferência!');
-            // Adiciona feedback visual no campo do token
-            const tokenInput = button.previousElementSibling.querySelector('.token-input');
-            if (tokenInput) {
-                tokenInput.classList.add('token-copied-glow');
-                setTimeout(() => {
-                    tokenInput.classList.remove('token-copied-glow');
-                }, 1500); // O brilho dura 1.5 segundos
-            }
-        }).catch(err => {
-            console.error('Erro ao copiar token: ', err);
-            showMessageModal('Não foi possível copiar o token.');
-        });
-    }
-    
-    if (button.classList.contains('delete-member-button')) {
-        const memberId = button.dataset.id;
-        const memberName = button.dataset.name;
-        const confirmed = await showMessageModal(`Tem certeza que deseja excluir o colaborador "${memberName}"? Esta ação não pode ser desfeita.`, 'confirm');
-        if (confirmed) {
-            deleteDoc(doc(db, "members", memberId)).then(() => {
-                showMessageModal("Colaborador excluído com sucesso.");
-            }).catch(err => showMessageModal("Erro ao excluir colaborador."));
-        }
-    }
-    
-    if (button.classList.contains('regenerate-token-button')) {
-        const memberId = button.dataset.id;
-        const memberName = button.dataset.name;
-        const confirmed = await showMessageModal(`Tem certeza que deseja gerar um novo token para "${memberName}"? O token antigo deixará de funcionar.`, 'confirm');
-        if (confirmed) {
-            const newLoginToken = Math.random().toString(36).substring(2) + Date.now().toString(36);
-            const memberDocRef = doc(db, "members", memberId);
-            try {
-                await updateDoc(memberDocRef, { loginToken: newLoginToken });
-                showMessageModal(`Novo token gerado para ${memberName}. O novo token já está visível na lista.`);
-            } catch (error) {
-                console.error("Erro ao gerar novo token:", error);
-                showMessageModal("Erro ao gerar novo token. Tente novamente.");
-            }
-        }
-    }
-
-    if (button.classList.contains('edit-member-button')) {
-        const memberId = button.dataset.id;
-        const memberName = button.dataset.name;
-        const memberEmail = button.dataset.email;
-
-        editMemberIdInput.value = memberId;
-        editMemberNameInput.value = memberName;
-        editMemberEmailInput.value = memberEmail;
-
-        editMemberModal.classList.remove('hidden');
-    }
-});
-
-editMemberForm.addEventListener('submit', async (e) => {
-    e.preventDefault();
-
-    const memberId = editMemberIdInput.value;
-    const newName = editMemberNameInput.value.trim();
-    const newEmail = editMemberEmailInput.value.trim();
-
-    if (!memberId || !newName || !newEmail) {
-        showMessageModal("Todos os campos são obrigatórios.");
-        return;
-    }
-
-    const buttonText = saveEditMemberButton.querySelector('.button-text');
-    const spinner = saveEditMemberButton.querySelector('.button-spinner');
-
-    saveEditMemberButton.disabled = true;
-    buttonText.classList.add('hidden');
-    spinner.classList.remove('hidden');
-    spinner.style.display = 'inline-block';
-
-    const memberDocRef = doc(db, "members", memberId);
-
-    try {
-        await updateDoc(memberDocRef, { name: newName, email: newEmail });
-        editMemberModal.classList.add('hidden');
-        showMessageModal("Informações do colaborador atualizadas com sucesso.");
-    } catch (error) {
-        console.error("Erro ao atualizar colaborador:", error);
-        showMessageModal("Erro ao atualizar informações. Tente novamente.");
-    } finally {
-        saveEditMemberButton.disabled = false;
-        buttonText.classList.remove('hidden');
-        spinner.style.display = 'none';
-    }
-});
-
-cancelEditMemberButton.addEventListener('click', () => {
-    editMemberModal.classList.add('hidden');
-});
-
-tasksList.addEventListener('click', async (e) => {
-    const button = e.target.closest('button');
-    if (!button) return;
-
-    // Handle Edit Task
-    if (button.classList.contains('edit-task-button')) {
-        const taskId = button.dataset.id;
-        const taskName = button.dataset.name;
-
-        editTaskIdInput.value = taskId;
-        editTaskNameInput.value = taskName;
-
-        editTaskModal.classList.remove('hidden');
-    }
-
-    // Handle Delete Task
-    if (button.classList.contains('delete-task-button')) {
-        const taskId = button.dataset.id;
-        const taskName = button.dataset.name;
-        const confirmed = await showMessageModal(`Tem certeza que deseja excluir a tarefa "${taskName}"?`, 'confirm');
-        if (confirmed) {
-            await deleteDoc(doc(db, "tasks", taskId));
-            showMessageModal("Tarefa excluída com sucesso.");
-        }
-    }
-});
-
-cancelEditTaskButton.addEventListener('click', () => {
-    editTaskModal.classList.add('hidden');
-});
-
-editTaskForm.addEventListener('submit', async (e) => {
-    e.preventDefault();
-
-    const taskId = editTaskIdInput.value;
-    const newName = editTaskNameInput.value.trim();
-
-    if (!newName) {
-        showMessageModal("O nome da tarefa não pode ser vazio.");
-        return;
-    }
-
-    // Validação para impedir tarefas duplicadas (case-insensitive), ignorando a própria tarefa
-    const isDuplicate = allTasks.some(task =>
-        task.name.toLowerCase() === newName.toLowerCase() && task.id !== taskId
-    );
-
-    if (isDuplicate) {
-        showMessageModal(`A tarefa "${newName}" já existe.`);
-        return;
-    }
-
-    const buttonText = saveEditTaskButton.querySelector('.button-text');
-    const spinner = saveEditTaskButton.querySelector('.button-spinner');
-
-    saveEditTaskButton.disabled = true;
-    buttonText.classList.add('hidden');
-    spinner.classList.remove('hidden');
-    spinner.style.display = 'inline-block';
-
-    const taskDocRef = doc(db, "tasks", taskId);
-
-    try {
-        await updateDoc(taskDocRef, { name: newName });
-        editTaskModal.classList.add('hidden');
-        showMessageModal("Tarefa atualizada com sucesso.");
-    } catch (error) {
-        console.error("Erro ao atualizar tarefa:", error);
-        showMessageModal("Erro ao atualizar a tarefa. Tente novamente.");
-    } finally {
-        saveEditTaskButton.disabled = false;
-        buttonText.classList.remove('hidden');
-        spinner.style.display = 'none';
-    }
-});
-
-searchMemberInput.addEventListener('input', () => {
-    membersCurrentPage = 1;
-    renderMembers();
-});
-
-prevMembersPageButton.addEventListener('click', () => {
-    if (membersCurrentPage > 1) {
-        membersCurrentPage--;
-        renderMembers();
-    }
-});
-
-nextMembersPageButton.addEventListener('click', () => {
-    const searchTerm = searchMemberInput.value.toLowerCase();
-    const filteredMembers = allMembers.filter(member =>
-        member.name.toLowerCase().includes(searchTerm) ||
-        member.email.toLowerCase().includes(searchTerm)
-    );
-    const totalPages = Math.ceil(filteredMembers.length / membersPageSize);
-
-    if (membersCurrentPage < totalPages) {
-        membersCurrentPage++;
-        renderMembers();
-    }
-});
-
-// Iniciar a página
 document.addEventListener('DOMContentLoaded', () => {
+    initUIElements();
     initializeDashboard();
     initThemeManager('theme-toggle');
+
+    if (addMemberButton) addMemberButton.addEventListener('click', () => createMemberModal.classList.remove('hidden'));
+    if (cancelCreateMemberButton) cancelCreateMemberButton.addEventListener('click', () => createMemberModal.classList.add('hidden'));
+
+    if (addTaskForm) {
+        addTaskForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const taskName = newTaskNameInput.value.trim();
+            if (taskName && userId) {
+                const isDuplicate = allTasks.some(task => task.name.toLowerCase() === taskName.toLowerCase());
+                if (isDuplicate) {
+                    showMessageModal(`A tarefa "${taskName}" já existe.`);
+                    return;
+                }
+
+                try {
+                    await addDoc(collection(db, "tasks"), {
+                        name: taskName,
+                        companyId: userId,
+                        createdAt: new Date()
+                    });
+                } catch (error) {
+                    console.error("Erro ao adicionar tarefa:", error);
+                    showMessageModal("Não foi possível adicionar a tarefa.");
+                } finally {
+                    newTaskNameInput.value = '';
+                }
+            }
+        });
+    }
+
+    if (createMemberForm) {
+        createMemberForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            if (!userId) {
+                showMessageModal("Erro de autenticação. Por favor, faça login novamente.");
+                return;
+            }
+
+            const submitButton = document.getElementById('submit-create-member');
+            toggleButtonLoading(submitButton, true);
+
+            const memberName = createMemberForm['member-name'].value;
+            const memberEmail = createMemberForm['member-email'].value;
+
+            // NOTA DE SEGURANÇA: A geração de tokens no lado do cliente é adequada para protótipos,
+            // mas insegura para produção. O ideal é gerar este token em uma Cloud Function
+            // para garantir que seja único e criptograficamente seguro.
+            const loginToken = Math.random().toString(36).substring(2) + Date.now().toString(36);
+
+            try {
+                await addDoc(collection(db, "members"), {
+                    name: memberName,
+                    email: memberEmail,
+                    companyId: userId,
+                    loginToken: loginToken,
+                    createdAt: new Date()
+                });
+
+                createMemberModal.classList.add('hidden');
+                createMemberForm.reset();
+                showMessageModal(`Colaborador adicionado! O token de acesso é: ${loginToken}. Copie e envie para o colaborador.`);
+            } catch (error) {
+                console.error("Erro ao adicionar colaborador:", error);
+                showMessageModal("Erro ao adicionar colaborador. Tente novamente.");
+            } finally {
+                toggleButtonLoading(submitButton, false);
+            }
+        });
+    }
+
+    if (membersList) {
+        membersList.addEventListener('click', async (e) => {
+            const button = e.target.closest('button');
+            if (!button) return;
+
+            if (button.classList.contains('copy-token-button')) {
+                const token = button.dataset.token;
+                navigator.clipboard.writeText(token).then(() => {
+                    showMessageModal('Token copiado para a área de transferência!');
+                    const tokenInput = button.previousElementSibling.querySelector('.token-input');
+                    if (tokenInput) {
+                        tokenInput.classList.add('token-copied-glow');
+                        setTimeout(() => {
+                            tokenInput.classList.remove('token-copied-glow');
+                        }, 1500);
+                    }
+                }).catch(err => {
+                    console.error('Erro ao copiar token: ', err);
+                    showMessageModal('Não foi possível copiar o token.');
+                });
+            }
+
+            if (button.classList.contains('delete-member-button')) {
+                const memberId = button.dataset.id;
+                const memberName = button.dataset.name;
+                const confirmed = await showMessageModal(`Tem certeza que deseja excluir o colaborador "${memberName}"? Esta ação não pode ser desfeita.`, 'confirm');
+                if (confirmed) {
+                    deleteDoc(doc(db, "members", memberId)).then(() => {
+                        showMessageModal("Colaborador excluído com sucesso.");
+                    }).catch(err => showMessageModal("Erro ao excluir colaborador."));
+                }
+            }
+
+            if (button.classList.contains('regenerate-token-button')) {
+                const memberId = button.dataset.id;
+                const memberName = button.dataset.name;
+                const confirmed = await showMessageModal(`Tem certeza que deseja gerar um novo token para "${memberName}"? O token antigo deixará de funcionar.`, 'confirm');
+                if (confirmed) {
+                    const newLoginToken = Math.random().toString(36).substring(2) + Date.now().toString(36);
+                    const memberDocRef = doc(db, "members", memberId);
+                    // NOTA DE SEGURANÇA: Assim como na criação, a regeneração de tokens deve,
+                    // idealmente, ocorrer no lado do servidor (server-side) por segurança.
+                    try {
+                        await updateDoc(memberDocRef, { loginToken: newLoginToken });
+                        showMessageModal(`Novo token gerado para ${memberName}. O novo token já está visível na lista.`);
+                    } catch (error) {
+                        console.error("Erro ao gerar novo token:", error);
+                        showMessageModal("Erro ao gerar novo token. Tente novamente.");
+                    }
+                }
+            }
+
+            if (button.classList.contains('edit-member-button')) {
+                editMemberIdInput.value = button.dataset.id;
+                editMemberNameInput.value = button.dataset.name;
+                editMemberEmailInput.value = button.dataset.email;
+                editMemberModal.classList.remove('hidden');
+            }
+        });
+    }
+
+    if (editMemberForm) {
+        editMemberForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const memberId = editMemberIdInput.value;
+            const newName = editMemberNameInput.value.trim();
+            const newEmail = editMemberEmailInput.value.trim();
+
+            if (!memberId || !newName || !newEmail) {
+                showMessageModal("Todos os campos são obrigatórios.");
+                return;
+            }
+
+            toggleButtonLoading(saveEditMemberButton, true);
+            const memberDocRef = doc(db, "members", memberId);
+
+            try {
+                await updateDoc(memberDocRef, { name: newName, email: newEmail });
+                editMemberModal.classList.add('hidden');
+                showMessageModal("Informações do colaborador atualizadas com sucesso.");
+            } catch (error) {
+                console.error("Erro ao atualizar colaborador:", error);
+                showMessageModal("Erro ao atualizar informações. Tente novamente.");
+            } finally {
+                toggleButtonLoading(saveEditMemberButton, false);
+            }
+        });
+    }
+
+    if (cancelEditMemberButton) cancelEditMemberButton.addEventListener('click', () => editMemberModal.classList.add('hidden'));
+
+    if (tasksList) {
+        tasksList.addEventListener('click', async (e) => {
+            const button = e.target.closest('button');
+            if (!button) return;
+
+            if (button.classList.contains('edit-task-button')) {
+                editTaskIdInput.value = button.dataset.id;
+                editTaskNameInput.value = button.dataset.name;
+                editTaskModal.classList.remove('hidden');
+            }
+
+            if (button.classList.contains('delete-task-button')) {
+                const taskId = button.dataset.id;
+                const taskName = button.dataset.name;
+                const confirmed = await showMessageModal(`Tem certeza que deseja excluir a tarefa "${taskName}"?`, 'confirm');
+                if (confirmed) {
+                    await deleteDoc(doc(db, "tasks", taskId));
+                    showMessageModal("Tarefa excluída com sucesso.");
+                }
+            }
+        });
+    }
+
+    if (cancelEditTaskButton) cancelEditTaskButton.addEventListener('click', () => editTaskModal.classList.add('hidden'));
+
+    if (editTaskForm) {
+        editTaskForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const taskId = editTaskIdInput.value;
+            const newName = editTaskNameInput.value.trim();
+
+            if (!newName) {
+                showMessageModal("O nome da tarefa não pode ser vazio.");
+                return;
+            }
+
+            const isDuplicate = allTasks.some(task =>
+                task.name.toLowerCase() === newName.toLowerCase() && task.id !== taskId
+            );
+
+            if (isDuplicate) {
+                showMessageModal(`A tarefa "${newName}" já existe.`);
+                return;
+            }
+
+            toggleButtonLoading(saveEditTaskButton, true);
+            const taskDocRef = doc(db, "tasks", taskId);
+
+            try {
+                await updateDoc(taskDocRef, { name: newName });
+                editTaskModal.classList.add('hidden');
+                showMessageModal("Tarefa atualizada com sucesso.");
+            } catch (error) {
+                console.error("Erro ao atualizar tarefa:", error);
+                showMessageModal("Erro ao atualizar a tarefa. Tente novamente.");
+            } finally {
+                toggleButtonLoading(saveEditTaskButton, false);
+            }
+        });
+    }
+
+    if (searchMemberInput) {
+        searchMemberInput.addEventListener('input', () => {
+            membersCurrentPage = 1;
+            renderMembers();
+        });
+    }
+
+    if (prevMembersPageButton) {
+        prevMembersPageButton.addEventListener('click', () => {
+            if (membersCurrentPage > 1) {
+                membersCurrentPage--;
+                renderMembers();
+            }
+        });
+    }
+
+    if (nextMembersPageButton) {
+        nextMembersPageButton.addEventListener('click', () => {
+            const searchTerm = searchMemberInput.value.toLowerCase();
+            const filteredMembers = allMembers.filter(member =>
+                member.name.toLowerCase().includes(searchTerm) ||
+                member.email.toLowerCase().includes(searchTerm)
+            );
+            const totalPages = Math.ceil(filteredMembers.length / membersPageSize);
+
+            if (membersCurrentPage < totalPages) {
+                membersCurrentPage++;
+                renderMembers();
+            }
+        });
+    }
 });

@@ -1,11 +1,10 @@
 import firebaseConfig from './FireBase.js';
 import { initThemeManager } from './theme-manager.js';
-import { showMessageModal } from './ui-helpers.js';
+import { showMessageModal, formatDuration, updateChart } from './ui-helpers.js';
+import { Timer } from './timer.js';
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
 import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 import { getFirestore, doc, getDoc, collection, query, where, addDoc, onSnapshot, orderBy, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-
-// O tema é aplicado por initThemeManager
 
 // Variáveis globais
 let app, db;
@@ -14,31 +13,31 @@ let chartInstance = null;
 let allProjects = {};
 let allTasks = []; // Armazena a lista completa de tarefas
 
-// Estado do Timer
-let isRunning = false;
-let startTime = null;
-let timerInterval = null;
-let projectToStart = '';
+let timer;
 
-// Elementos da UI
-const memberNameDisplay = document.getElementById('member-name-display');
-const logoutButton = document.getElementById('logout-button');
-const timerDisplay = document.getElementById('timer-display');
-const startButton = document.getElementById('start-button');
-const stopButton = document.getElementById('stop-button');
-const resetButton = document.getElementById('reset-button');
-const projectInput = document.getElementById('project-input');
-const timeEntriesList = document.getElementById('time-entries-list');
-const messageModal = document.getElementById('message-modal');
-const messageText = document.getElementById('message-text');
-const messageOkButton = document.getElementById('message-ok');
-const taskSelectionModal = document.getElementById('task-selection-modal');
-const existingTasksList = document.getElementById('existing-tasks-list');
-const newTaskInput = document.getElementById('new-task-input');
-const startTimerConfirmButton = document.getElementById('start-timer-confirm-button');
-const cancelTaskSelectionButton = document.getElementById('cancel-task-selection-button');
+let memberNameDisplay, logoutButton, timerDisplay, startButton, stopButton, resetButton,
+    projectInput, timeEntriesList, messageModal, messageText, messageOkButton,
+    taskSelectionModal, existingTasksList, newTaskInput, startTimerConfirmButton,
+    cancelTaskSelectionButton;
 
-messageOkButton.addEventListener('click', () => messageModal.classList.add('hidden'));
+function initUIElements() {
+    memberNameDisplay = document.getElementById('member-name-display');
+    logoutButton = document.getElementById('logout-button');
+    timerDisplay = document.getElementById('timer-display');
+    startButton = document.getElementById('start-button');
+    stopButton = document.getElementById('stop-button');
+    resetButton = document.getElementById('reset-button');
+    projectInput = document.getElementById('project-input');
+    timeEntriesList = document.getElementById('time-entries-list');
+    messageModal = document.getElementById('message-modal');
+    messageText = document.getElementById('message-text');
+    messageOkButton = document.getElementById('message-ok');
+    taskSelectionModal = document.getElementById('task-selection-modal');
+    existingTasksList = document.getElementById('existing-tasks-list');
+    newTaskInput = document.getElementById('new-task-input');
+    startTimerConfirmButton = document.getElementById('start-timer-confirm-button');
+    cancelTaskSelectionButton = document.getElementById('cancel-task-selection-button');
+}
 
 // Lógica de Autenticação e Inicialização
 async function initializeProfilePage() {
@@ -58,6 +57,13 @@ async function initializeProfilePage() {
                     memberProfile = { id: memberDocSnap.id, ...memberDocSnap.data() };
 
                     // Atualiza UI com dados do colaborador
+                    timer = new Timer(
+                        document.getElementById('timer-display'),
+                        document.getElementById('start-button'),
+                        document.getElementById('stop-button'),
+                        document.getElementById('reset-button'),
+                        document.getElementById('project-input'),
+                        saveTimeEntry);
                     memberNameDisplay.textContent = `Olá, ${memberProfile.name}`;
                     projectInput.disabled = false;
                     startButton.disabled = false;
@@ -84,37 +90,8 @@ async function initializeProfilePage() {
     }
 }
 
-logoutButton.addEventListener('click', async () => {
-    const auth = getAuth(app);
-    await signOut(auth);
-    // O listener onAuthStateChanged irá redirecionar automaticamente.
-});
-
-// Funções do Rastreador de Tempo (adaptadas de scripts.js)
-function updateTimer() {
-    if (!isRunning) return;
-    const elapsedTime = Date.now() - startTime;
-    const totalSeconds = Math.floor(elapsedTime / 1000);
-    const hours = Math.floor(totalSeconds / 3600);
-    const minutes = Math.floor((totalSeconds % 3600) / 60);
-    const seconds = totalSeconds % 60;
-    timerDisplay.textContent = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
-}
-
-function _startTimerWithTask(taskName) {
-    isRunning = true;
-    startTime = Date.now();
-    projectToStart = taskName;
-    projectInput.value = taskName; // Atualiza o input principal para exibição
-
-    timerInterval = setInterval(updateTimer, 1000);
-    startButton.disabled = true;
-    stopButton.disabled = false;
-    resetButton.disabled = false;
-}
-
 async function openTaskSelectionModal() {
-    if (isRunning) return;
+    if (timer && timer.isRunning) return;
     populateTaskSelectionModal(allTasks);
     taskSelectionModal.classList.remove('hidden');
 }
@@ -123,7 +100,11 @@ function populateTaskSelectionModal(tasks) {
     existingTasksList.innerHTML = '';
     newTaskInput.value = ''; // Limpa o campo de nova tarefa
     if (tasks.length === 0) {
-        existingTasksList.innerHTML = '<p class="p-3 text-center text-sm text-gray-500">Nenhuma tarefa pré-definida.</p>';
+        const p = document.createElement('p');
+        p.className = 'p-3 text-center text-sm text-gray-500';
+        p.textContent = 'Nenhuma tarefa pré-definida.';
+        existingTasksList.innerHTML = '';
+        existingTasksList.appendChild(p);
     } else {
         tasks.forEach(task => {
             const taskElement = document.createElement('div');
@@ -133,27 +114,6 @@ function populateTaskSelectionModal(tasks) {
             existingTasksList.appendChild(taskElement);
         });
     }
-}
-
-async function stopTimer() {
-    if (!isRunning) return;
-    clearInterval(timerInterval);
-    isRunning = false;
-    const endTime = Date.now();
-    const duration = endTime - startTime;
-    await saveTimeEntry(projectToStart, duration); // projectToStart holds the task name
-    resetTimer();
-}
-
-function resetTimer() {
-    clearInterval(timerInterval);
-    isRunning = false;
-    startTime = null;
-    timerDisplay.textContent = "00:00:00";
-    startButton.disabled = false;
-    stopButton.disabled = true;
-    resetButton.disabled = true;
-    projectInput.value = '';
 }
 
 async function saveTimeEntry(projectName, duration) {
@@ -175,94 +135,26 @@ async function saveTimeEntry(projectName, duration) {
     }
 }
 
-// Funções de Renderização (adaptadas de scripts.js)
-function formatDuration(seconds) {
-    const h = String(Math.floor(seconds / 3600)).padStart(2, '0');
-    const m = String(Math.floor((seconds % 3600) / 60)).padStart(2, '0');
-    const s = String(seconds % 60).padStart(2, '0');
-    return `${h}:${m}:${s}`;
-}
-
 function renderTimeEntries(entries) {
     timeEntriesList.innerHTML = '';
     if (entries.length === 0) {
-        timeEntriesList.innerHTML = '<p class="text-center text-gray-500">Nenhuma entrada de tempo encontrada.</p>';
+        const p = document.createElement('p');
+        p.className = 'text-center text-gray-500';
+        p.textContent = 'Nenhuma entrada de tempo encontrada.';
+        timeEntriesList.appendChild(p);
         return;
     }
     entries.forEach(entry => {
         const entryElement = document.createElement('div');
         entryElement.className = 'p-4 bg-white dark:bg-gray-800 rounded-lg shadow-sm';
-        entryElement.innerHTML = `
-            <p class="font-bold">${entry.projectName}</p>
-            <p class="text-sm text-gray-500 dark:text-gray-400">${new Date(entry.timestamp.seconds * 1000).toLocaleDateString()} - Duração: ${formatDuration(entry.duration)}</p>
-        `;
+        const projectP = document.createElement('p');
+        projectP.className = 'font-bold';
+        projectP.textContent = entry.projectName;
+        const detailsP = document.createElement('p');
+        detailsP.className = 'text-sm text-gray-500 dark:text-gray-400';
+        detailsP.textContent = `${new Date(entry.timestamp.seconds * 1000).toLocaleDateString()} - Duração: ${formatDuration(entry.duration)}`;
+        entryElement.append(projectP, detailsP);
         timeEntriesList.appendChild(entryElement);
-    });
-}
-
-function updateChart(data) {
-    const projects = Object.keys(data);
-    const durations = Object.values(data);
-
-    // Define as cores com base no tema
-    const isDarkMode = document.body.classList.contains('dark');
-    const gridColor = isDarkMode ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.1)';
-    const textColor = isDarkMode ? '#E2E8F0' : '#1A202C';
-
-    if (chartInstance) {
-        chartInstance.destroy();
-    }
-    const ctx = document.getElementById('project-chart').getContext('2d');
-    chartInstance = new Chart(ctx, {
-        type: 'bar',
-        data: {
-            labels: projects,
-            datasets: [{
-                label: 'Tempo Gasto (em segundos)',
-                data: durations,
-                backgroundColor: 'rgba(59, 130, 246, 0.7)',
-            }]
-        },
-        options: {
-            responsive: true,
-            scales: {
-                y: {
-                    beginAtZero: true,
-                    title: {
-                        display: true,
-                        text: 'Tempo Total (segundos)',
-                        color: textColor
-                    },
-                    ticks: {
-                        color: textColor
-                    },
-                    grid: {
-                        color: gridColor
-                    }
-                },
-                x: {
-                    ticks: {
-                        color: textColor
-                    },
-                    grid: {
-                        color: gridColor,
-                        drawOnChartArea: false
-                    }
-                }
-            },
-            plugins: {
-                legend: {
-                    labels: {
-                        color: textColor
-                    }
-                },
-                tooltip: {
-                    callbacks: {
-                        label: (context) => `Duração: ${formatDuration(context.parsed.y)}`
-                    }
-                }
-            }
-        }
     });
 }
 
@@ -297,7 +189,7 @@ function setupRealtimeChart() {
                 allProjects[data.projectName] = data.duration;
             }
         });
-        updateChart(allProjects);
+        chartInstance = updateChart(chartInstance, allProjects);
     });
 }
 
@@ -313,33 +205,49 @@ function setupTasksListener(companyId) {
     });
 }
 
-// Event Listeners
-startButton.addEventListener('click', openTaskSelectionModal);
-stopButton.addEventListener('click', stopTimer);
-resetButton.addEventListener('click', resetTimer);
-
-cancelTaskSelectionButton.addEventListener('click', () => {
-    taskSelectionModal.classList.add('hidden');
-});
-
-existingTasksList.addEventListener('click', (e) => {
-    if (e.target && e.target.dataset.taskName) {
-        newTaskInput.value = e.target.dataset.taskName;
-    }
-});
-
-startTimerConfirmButton.addEventListener('click', () => {
-    const selectedTask = newTaskInput.value.trim();
-    if (selectedTask === "") {
-        showMessageModal("Por favor, selecione ou digite uma tarefa.");
-        return;
-    }
-    taskSelectionModal.classList.add('hidden');
-    _startTimerWithTask(selectedTask);
-});
-
 // Iniciar a página
 document.addEventListener('DOMContentLoaded', () => {
+    initUIElements();
     initializeProfilePage();
-    initThemeManager('theme-toggle', () => updateChart(allProjects));
+    initThemeManager('theme-toggle', () => chartInstance = updateChart(chartInstance, allProjects));
+
+    if (messageOkButton) messageOkButton.addEventListener('click', () => messageModal.classList.add('hidden'));
+
+    if (logoutButton) {
+        logoutButton.addEventListener('click', async () => {
+            const auth = getAuth(app);
+            await signOut(auth);
+            // O listener onAuthStateChanged irá redirecionar automaticamente.
+        });
+    }
+
+    if (startButton) {
+        startButton.addEventListener('click', openTaskSelectionModal);
+    }
+
+    if (cancelTaskSelectionButton) {
+        cancelTaskSelectionButton.addEventListener('click', () => {
+            taskSelectionModal.classList.add('hidden');
+        });
+    }
+
+    if (existingTasksList) {
+        existingTasksList.addEventListener('click', (e) => {
+            if (e.target && e.target.dataset.taskName) {
+                newTaskInput.value = e.target.dataset.taskName;
+            }
+        });
+    }
+
+    if (startTimerConfirmButton) {
+        startTimerConfirmButton.addEventListener('click', () => {
+            const selectedTask = newTaskInput.value.trim();
+            if (selectedTask === "") {
+                showMessageModal("Por favor, selecione ou digite uma tarefa.");
+                return;
+            }
+            taskSelectionModal.classList.add('hidden');
+            timer.start(selectedTask);
+        });
+    }
 });

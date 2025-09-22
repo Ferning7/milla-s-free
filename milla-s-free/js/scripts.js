@@ -1,95 +1,101 @@
 import firebaseConfig from './FireBase.js';
 import { initThemeManager } from './theme-manager.js';
-import { showMessageModal } from './ui-helpers.js';
+import { showMessageModal, formatDuration, updateChart, toggleButtonLoading } from './ui-helpers.js';
+import { Timer } from './timer.js';
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
 import { getAuth, onAuthStateChanged, signOut, createUserWithEmailAndPassword, signInWithEmailAndPassword, sendPasswordResetEmail, sendEmailVerification } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-import { getFirestore, doc, getDoc, addDoc, setDoc, updateDoc, deleteDoc, onSnapshot, collection, query, where, orderBy, limit, startAfter, endBefore, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-import { setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { getFirestore, doc, getDoc, addDoc, setDoc, updateDoc, deleteDoc, onSnapshot, collection, query, where, orderBy, limit, startAfter, endBefore, getDocs, setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-// Altere para 'warn' ou 'error' para reduzir os logs, ou comente a linha.
 setLogLevel('warn');
 
-// Variáveis globais do Firebase
 let app, auth, db;
 let userId;
 let appId;
 let lastVisible = null;
 const pageSize = 5;
 
-// Variáveis de estado
-let isRunning = false;
-let startTime = null;
-let timerInterval = null;
-let projectToStart = '';
+let timer;
 let currentPage = 1;
-let allTasks = []; // Armazena a lista completa de tarefas
+let allTasks = [];
 let chartInstance = null;
 let allProjects = {}; 
-let allTimeEntries = []; // Array para armazenar todas as entradas de tempo
-let selectedMemberId = 'all'; // 'all', 'company' (para empresa), ou um memberId
-let membersMap = new Map(); // Mapa para armazenar nomes de colaboradores
+let allTimeEntries = [];
+let selectedMemberId = 'all';
+let membersMap = new Map();
 
-// Elementos da UI
-const timerDisplay = document.getElementById('timer-display');
-const startButton = document.getElementById('start-button');
-const stopButton = document.getElementById('stop-button');
-const resetButton = document.getElementById('reset-button');
-const projectInput = document.getElementById('project-input');
-const timeEntriesList = document.getElementById('time-entries-list');
-const prevPageButton = document.getElementById('prev-page-button');
-const nextPageButton = document.getElementById('next-page-button');
-const paginationControls = document.getElementById('pagination-controls');
-const editModal = document.getElementById('edit-modal');
-const editEntryIdInput = document.getElementById('edit-entry-id');
-const editProjectInput = document.getElementById('edit-project-input');
-const editDateInput = document.getElementById('edit-date-input');
-const editHoursInput = document.getElementById('edit-hours');
-const editMinutesInput = document.getElementById('edit-minutes');
-const editSecondsInput = document.getElementById('edit-seconds');
-const saveEditButton = document.getElementById('save-edit-button');
-const cancelEditButton = document.getElementById('cancel-edit-button');
-const menuToggle = document.getElementById('menu-toggle');
-const sidebar = document.getElementById('sidebar');
-const sidebarOverlay = document.getElementById('sidebar-overlay');
-const profileToggle = document.getElementById('profile-toggle');
-const profileModal = document.getElementById('profile-modal');
-const userView = document.getElementById('user-view');
-const guestView = document.getElementById('guest-view');
-const userEmailDisplay = document.getElementById('user-email-display');
-const logoutButton = document.getElementById('logout-button');
-const shareToggle = document.getElementById('share-toggle');
-const shareModal = document.getElementById('share-modal');
-const appIdDisplay = document.getElementById('app-id-display');
-const copyAppIdButton = document.getElementById('copy-app-id');
-const closeShareModalButton = document.getElementById('close-share-modal');
+let timerDisplay, startButton, stopButton, resetButton, projectInput, timeEntriesList,
+    prevPageButton, nextPageButton, paginationControls, editModal, editEntryIdInput,
+    editProjectInput, editDateInput, editHoursInput, editMinutesInput, editSecondsInput,
+    saveEditButton, cancelEditButton, menuToggle, sidebar, sidebarOverlay, profileToggle,
+    profileModal, userView, guestView, userEmailDisplay, logoutButton, shareToggle,
+    shareModal, appIdDisplay, copyAppIdButton, closeShareModalButton, showLoginModalButton,
+    showRegisterModalButton, loginModal, loginForm, loginEmailInput, loginPasswordInput,
+    cancelLoginButton, registerModal, registerForm, cancelRegisterButton, messageModal,
+    messageText, messageOkButton, messageCancelButton, forgotPasswordLink,
+    forgotPasswordModal, forgotPasswordForm, forgotEmailInput, cancelForgotButton,
+    taskSelectionModal, existingTasksList, newTaskInput, startTimerConfirmButton,
+    cancelTaskSelectionButton, memberFilter;
 
-const showLoginModalButton = document.getElementById('show-login-modal-button');
-const showRegisterModalButton = document.getElementById('show-register-modal-button');
-const loginModal = document.getElementById('login-modal');
-const loginForm = document.getElementById('login-form');
-const loginEmailInput = document.getElementById('login-email');
-const loginPasswordInput = document.getElementById('login-password');
-const cancelLoginButton = document.getElementById('cancel-login-button');
-const registerModal = document.getElementById('register-modal');
-const registerForm = document.getElementById('register-form');
-const cancelRegisterButton = document.getElementById('cancel-register-button');
-const messageModal = document.getElementById('message-modal');
-const messageText = document.getElementById('message-text');
-const messageOkButton = document.getElementById('message-ok');
-const messageCancelButton = document.getElementById('message-cancel');
-const forgotPasswordLink = document.getElementById('forgot-password-link');
-const forgotPasswordModal = document.getElementById('forgot-password-modal');
-const forgotPasswordForm = document.getElementById('forgot-password-form');
-const forgotEmailInput = document.getElementById('forgot-email');
-const cancelForgotButton = document.getElementById('cancel-forgot-button');
-const taskSelectionModal = document.getElementById('task-selection-modal');
-const existingTasksList = document.getElementById('existing-tasks-list');
-const newTaskInput = document.getElementById('new-task-input');
-const startTimerConfirmButton = document.getElementById('start-timer-confirm-button');
-const cancelTaskSelectionButton = document.getElementById('cancel-task-selection-button');
-const memberFilter = document.getElementById('member-filter');
+function initUIElements() {
+    timerDisplay = document.getElementById('timer-display');
+    startButton = document.getElementById('start-button');
+    stopButton = document.getElementById('stop-button');
+    resetButton = document.getElementById('reset-button');
+    projectInput = document.getElementById('project-input');
+    timeEntriesList = document.getElementById('time-entries-list');
+    prevPageButton = document.getElementById('prev-page-button');
+    nextPageButton = document.getElementById('next-page-button');
+    paginationControls = document.getElementById('pagination-controls');
+    editModal = document.getElementById('edit-modal');
+    editEntryIdInput = document.getElementById('edit-entry-id');
+    editProjectInput = document.getElementById('edit-project-input');
+    editDateInput = document.getElementById('edit-date-input');
+    editHoursInput = document.getElementById('edit-hours');
+    editMinutesInput = document.getElementById('edit-minutes');
+    editSecondsInput = document.getElementById('edit-seconds');
+    saveEditButton = document.getElementById('save-edit-button');
+    cancelEditButton = document.getElementById('cancel-edit-button');
+    menuToggle = document.getElementById('menu-toggle');
+    sidebar = document.getElementById('sidebar');
+    sidebarOverlay = document.getElementById('sidebar-overlay');
+    profileToggle = document.getElementById('profile-toggle');
+    profileModal = document.getElementById('profile-modal');
+    userView = document.getElementById('user-view');
+    guestView = document.getElementById('guest-view');
+    userEmailDisplay = document.getElementById('user-email-display');
+    logoutButton = document.getElementById('logout-button');
+    shareToggle = document.getElementById('share-toggle');
+    shareModal = document.getElementById('share-modal');
+    appIdDisplay = document.getElementById('app-id-display');
+    copyAppIdButton = document.getElementById('copy-app-id');
+    closeShareModalButton = document.getElementById('close-share-modal');
+    showLoginModalButton = document.getElementById('show-login-modal-button');
+    showRegisterModalButton = document.getElementById('show-register-modal-button');
+    loginModal = document.getElementById('login-modal');
+    loginForm = document.getElementById('login-form');
+    loginEmailInput = document.getElementById('login-email');
+    loginPasswordInput = document.getElementById('login-password');
+    cancelLoginButton = document.getElementById('cancel-login-button');
+    registerModal = document.getElementById('register-modal');
+    registerForm = document.getElementById('register-form');
+    cancelRegisterButton = document.getElementById('cancel-register-button');
+    messageModal = document.getElementById('message-modal');
+    messageText = document.getElementById('message-text');
+    messageOkButton = document.getElementById('message-ok');
+    messageCancelButton = document.getElementById('message-cancel');
+    forgotPasswordLink = document.getElementById('forgot-password-link');
+    forgotPasswordModal = document.getElementById('forgot-password-modal');
+    forgotPasswordForm = document.getElementById('forgot-password-form');
+    forgotEmailInput = document.getElementById('forgot-email');
+    cancelForgotButton = document.getElementById('cancel-forgot-button');
+    taskSelectionModal = document.getElementById('task-selection-modal');
+    existingTasksList = document.getElementById('existing-tasks-list');
+    newTaskInput = document.getElementById('new-task-input');
+    startTimerConfirmButton = document.getElementById('start-timer-confirm-button');
+    cancelTaskSelectionButton = document.getElementById('cancel-task-selection-button');
+    memberFilter = document.getElementById('member-filter');
+}
 
-// Inicialização do Firebase
 async function initializeFirebase() {
     try {
         if (Object.keys(firebaseConfig).length > 0) {
@@ -99,11 +105,9 @@ async function initializeFirebase() {
 
             onAuthStateChanged(auth, async (user) => {
                 if (user) {
-                    // Usuário está logado
                     userId = user.uid;
                     console.log("Usuário autenticado:", userId);
 
-                    // Atualiza a UI para usuário logado
                     userEmailDisplay.textContent = user.email || 'Usuário Anônimo';
                     guestView.classList.add('hidden');
                     userView.classList.remove('hidden');
@@ -111,29 +115,31 @@ async function initializeFirebase() {
                     appId = firebaseConfig.appId;
                     appIdDisplay.textContent = appId;
 
-                    // Habilita funcionalidades do app
                     projectInput.disabled = false;
 
-                    // Esconde modais de autenticação
                     loginModal.classList.add('hidden');
                     registerModal.classList.add('hidden');
                     profileModal.classList.add('hidden');
 
-                    // Inicializa listeners
                     setupTimeEntriesListener();
+                    setupMembersListener();
                     setupRealtimeChart();
                     setupTasksListener();
                     updateVerificationStatus(user);
+                    timer = new Timer(
+                        document.getElementById('timer-display'),
+                        document.getElementById('start-button'),
+                        document.getElementById('stop-button'),
+                        document.getElementById('reset-button'),
+                        document.getElementById('project-input'),
+                        saveTimeEntry);
                 } else {
-                    // Usuário está deslogado
                     userId = null;
                     console.log("Nenhum usuário logado.");
 
-                    // Atualiza a UI para visitante
                     userView.classList.add('hidden');
                     guestView.classList.remove('hidden');
 
-                    // Desabilita funcionalidades e limpa a UI
                     disableAppFeatures();
                     showMessageModal("Por favor, faça login ou cadastre-se para usar o aplicativo.");
                 }
@@ -148,19 +154,254 @@ async function initializeFirebase() {
     }
 }
 
-// Iniciar a aplicação
 document.addEventListener('DOMContentLoaded', () => {
+    initUIElements();
     initializeFirebase();
-    initThemeManager('theme-toggle', () => updateChart(allProjects));
+    initThemeManager('theme-toggle', () => chartInstance = updateChart(chartInstance, allProjects));
+
+    if (userView) {
+        userView.addEventListener('click', async (e) => {
+            if (e.target.id === 'resend-verification-button') {
+                try {
+                    await sendEmailVerification(auth.currentUser);
+                    showMessageModal("Um novo e-mail de verificação foi enviado.");
+                } catch (error) {
+                    console.error("Erro ao reenviar email de verificação:", error);
+                    showMessageModal("Erro ao reenviar e-mail. Tente novamente mais tarde.");
+                }
+            }
+        });
+    }
+
+    if (startButton) startButton.addEventListener('click', openTaskSelectionModal);
+    if (saveEditButton) saveEditButton.addEventListener('click', saveEditedEntry);
+    if (cancelEditButton) cancelEditButton.addEventListener('click', () => editModal.classList.add('hidden'));
+
+    if (timeEntriesList) {
+        timeEntriesList.addEventListener('click', async (e) => {
+            const button = e.target.closest('button');
+            if (!button) return;
+
+            const entryId = button.dataset.id;
+
+            if (button.classList.contains('edit-button')) {
+                openEditModal(entryId);
+            } else if (button.classList.contains('delete-button')) {
+                const confirmed = await showMessageModal("Tem certeza que deseja excluir esta entrada de tempo?", 'confirm');
+                if (confirmed) {
+                    deleteTimeEntry(entryId);
+                }
+            } else if (button.classList.contains('approve-button')) {
+                await updateDoc(doc(db, "timeEntries", entryId), { status: 'approved' });
+                showMessageModal("Entrada de tempo aprovada com sucesso.");
+            } else if (button.classList.contains('reject-button')) {
+                const confirmed = await showMessageModal("Tem certeza que deseja rejeitar e excluir esta entrada de tempo?", 'confirm');
+                if (confirmed) deleteTimeEntry(entryId);
+            }
+        });
+    }
+
+    if (memberFilter) {
+        memberFilter.addEventListener('change', () => {
+            selectedMemberId = memberFilter.value;
+            currentPage = 1;
+            renderCurrentPage();
+        });
+    }
+
+    if (cancelTaskSelectionButton) {
+        cancelTaskSelectionButton.addEventListener('click', () => {
+            taskSelectionModal.classList.add('hidden');
+        });
+    }
+
+    if (existingTasksList) {
+        existingTasksList.addEventListener('click', (e) => {
+            if (e.target && e.target.dataset.taskName) {
+                newTaskInput.value = e.target.dataset.taskName;
+            }
+        });
+    }
+
+    if (startTimerConfirmButton) {
+        startTimerConfirmButton.addEventListener('click', () => {
+            const selectedTask = newTaskInput.value.trim();
+            if (selectedTask === "") {
+                showMessageModal("Por favor, selecione ou digite uma tarefa.");
+                return;
+            }
+            taskSelectionModal.classList.add('hidden');
+            timer.start(selectedTask);
+        });
+    }
+
+    if (menuToggle) {
+        menuToggle.addEventListener('click', () => {
+            sidebar.classList.toggle('active');
+            menuToggle.classList.toggle('active');
+            sidebarOverlay.classList.toggle('active');
+        });
+    }
+
+    if (sidebarOverlay) {
+        sidebarOverlay.addEventListener('click', () => {
+            sidebar.classList.remove('active');
+            menuToggle.classList.remove('active');
+            sidebarOverlay.classList.remove('active');
+        });
+    }
+
+    if (profileToggle) {
+        profileToggle.addEventListener('click', (e) => {
+            e.stopPropagation();
+            profileModal.classList.toggle('hidden');
+        });
+    }
+
+    // Listener global no documento para fechar o modal de perfil
+    document.addEventListener('click', (e) => {
+        if (profileModal && !profileModal.contains(e.target) && profileToggle && !profileToggle.contains(e.target)) {
+            profileModal.classList.add('hidden');
+        }
+    });
+
+    if (shareToggle) shareToggle.addEventListener('click', () => shareModal.classList.remove('hidden'));
+    if (closeShareModalButton) closeShareModalButton.addEventListener('click', () => shareModal.classList.add('hidden'));
+
+    if (copyAppIdButton) {
+        copyAppIdButton.addEventListener('click', async () => {
+            const appIdText = appIdDisplay.textContent;
+            try {
+                await navigator.clipboard.writeText(appIdText);
+                showMessageModal("ID do aplicativo copiado!");
+            } catch (err) {
+                console.error('Erro ao copiar ID: ', err);
+                showMessageModal('Não foi possível copiar o ID.');
+            }
+        });
+    }
+
+    if (showLoginModalButton) {
+        showLoginModalButton.addEventListener('click', () => {
+            loginModal.classList.remove('hidden');
+            if (profileModal) profileModal.classList.add('hidden');
+        });
+    }
+
+    if (showRegisterModalButton) {
+        showRegisterModalButton.addEventListener('click', () => {
+            registerModal.classList.remove('hidden');
+            if (profileModal) profileModal.classList.add('hidden');
+        });
+    }
+
+    if (cancelLoginButton) cancelLoginButton.addEventListener('click', () => loginModal.classList.add('hidden'));
+    if (cancelRegisterButton) cancelRegisterButton.addEventListener('click', () => registerModal.classList.add('hidden'));
+
+    if (forgotPasswordLink) {
+        forgotPasswordLink.addEventListener('click', (e) => {
+            e.preventDefault();
+            loginModal.classList.add('hidden');
+            forgotPasswordModal.classList.remove('hidden');
+        });
+    }
+
+    if (cancelForgotButton) cancelForgotButton.addEventListener('click', () => forgotPasswordModal.classList.add('hidden'));
+
+    if (forgotPasswordForm) {
+        forgotPasswordForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const email = forgotEmailInput.value;
+            try {
+                await sendPasswordResetEmail(auth, email);
+                forgotPasswordModal.classList.add('hidden');
+                showMessageModal("Um link para redefinição de senha foi enviado para o seu e-mail, caso ele esteja cadastrado.");
+                forgotPasswordForm.reset();
+            } catch (error) {
+                console.error("Erro ao enviar e-mail de redefinição de senha:", error);
+                showMessageModal("Se o e-mail estiver correto e cadastrado, um link de redefinição será enviado.");
+            }
+        });
+    }
+
+    if (loginForm) {
+        loginForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const email = loginEmailInput.value;
+            const password = loginPasswordInput.value;
+
+            try {
+                await signInWithEmailAndPassword(auth, email, password);
+                showMessageModal("Login realizado com sucesso!");
+                loginForm.reset();
+            } catch (error) {
+                console.error("Erro no login:", error);
+                showMessageModal(`Erro no login: ${error.message.replace('Firebase: ', '')}`);
+            }
+        });
+    }
+
+    if (registerForm) {
+        registerForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const email = registerForm['register-email'].value;
+            const password = registerForm['register-password'].value;
+
+            try {
+                const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+                await sendEmailVerification(userCredential.user);
+                registerForm.reset();
+                showMessageModal("Cadastro realizado com sucesso! Um e-mail de verificação foi enviado para sua caixa de entrada.");
+            } catch (error) {
+                console.error("Erro no cadastro:", error);
+                showMessageModal(`Erro no cadastro: ${error.message.replace('Firebase: ', '')}`);
+            }
+        });
+    }
+
+    if (logoutButton) {
+        logoutButton.addEventListener('click', async () => {
+            try {
+                await signOut(auth);
+            } catch (error) {
+                console.error("Erro ao fazer logout:", error);
+                showMessageModal("Erro ao sair. Tente novamente.");
+            }
+        });
+    }
+
+    if (prevPageButton) {
+        prevPageButton.addEventListener('click', () => {
+            if (currentPage > 1) {
+                currentPage--;
+                renderCurrentPage();
+            }
+        });
+    }
+
+    if (nextPageButton) {
+        nextPageButton.addEventListener('click', () => {
+            const totalPages = Math.ceil(allTimeEntries.length / pageSize);
+            if (currentPage < totalPages) {
+                currentPage++;
+                renderCurrentPage();
+            }
+        });
+    }
 });
 
 function disableAppFeatures() {
-    resetTimer();
+    timer?.reset();
     projectInput.disabled = true;
     startButton.disabled = true;
     stopButton.disabled = true;
     resetButton.disabled = true;
     timeEntriesList.innerHTML = '<p class="text-center text-gray-500">Faça login para ver suas entradas de tempo.</p>';
+    const placeholder = document.createElement('p');
+    placeholder.className = 'text-center text-gray-500';
+    placeholder.textContent = 'Faça login para ver suas entradas de tempo.';
+    timeEntriesList.innerHTML = '';
+    timeEntriesList.appendChild(placeholder);
     if (chartInstance) {
         chartInstance.destroy();
         chartInstance = null;
@@ -172,56 +413,33 @@ function updateVerificationStatus(user) {
     const verificationStatusEl = document.getElementById('verification-status');
     if (!verificationStatusEl) return;
 
+    verificationStatusEl.innerHTML = '';
     if (user.emailVerified) {
-        verificationStatusEl.innerHTML = `<span class="text-green-500 flex items-center gap-1"><i class="fas fa-check-circle"></i> E-mail verificado</span>`;
+        const verifiedSpan = document.createElement('span');
+        verifiedSpan.className = 'text-green-500 flex items-center gap-1';
+        const icon = document.createElement('i');
+        icon.className = 'fas fa-check-circle';
+        verifiedSpan.append(icon, ' E-mail verificado');
+        verificationStatusEl.appendChild(verifiedSpan);
     } else {
-        verificationStatusEl.innerHTML = `
-            <div class="flex items-center justify-between">
-                 <span class="text-yellow-500 flex items-center gap-1"><i class="fas fa-exclamation-triangle"></i> E-mail não verificado</span>
-                 <button id="resend-verification-button" class="text-xs text-blue-500 hover:underline ml-2">Reenviar</button>
-            </div>
-        `;
+        const containerDiv = document.createElement('div');
+        containerDiv.className = 'flex items-center justify-between';
+        const unverifiedSpan = document.createElement('span');
+        unverifiedSpan.className = 'text-yellow-500 flex items-center gap-1';
+        const icon = document.createElement('i');
+        icon.className = 'fas fa-exclamation-triangle';
+        unverifiedSpan.append(icon, ' E-mail não verificado');
+        const resendButton = document.createElement('button');
+        resendButton.id = 'resend-verification-button';
+        resendButton.className = 'text-xs text-blue-500 hover:underline ml-2';
+        resendButton.textContent = 'Reenviar';
+        containerDiv.append(unverifiedSpan, resendButton);
+        verificationStatusEl.appendChild(containerDiv);
     }
-}
-
-userView.addEventListener('click', async (e) => {
-    if (e.target.id === 'resend-verification-button') {
-        try {
-            await sendEmailVerification(auth.currentUser);
-            showMessageModal("Um novo e-mail de verificação foi enviado.");
-        } catch (error) {
-            console.error("Erro ao reenviar email de verificação:", error);
-            showMessageModal("Erro ao reenviar e-mail. Tente novamente mais tarde.");
-        }
-    }
-});
-
-// Funções do Rastreador de Tempo
-function updateTimer() {
-    if (!isRunning) return;
-    const elapsedTime = Date.now() - startTime;
-    const totalSeconds = Math.floor(elapsedTime / 1000);
-    const hours = Math.floor(totalSeconds / 3600);
-    const minutes = Math.floor((totalSeconds % 3600) / 60);
-    const seconds = totalSeconds % 60;
-    timerDisplay.textContent = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
-}
-
-function _startTimerWithTask(taskName) {
-    isRunning = true;
-    startTime = Date.now();
-    projectToStart = taskName;
-    projectInput.value = taskName; // Atualiza o input principal para exibição
-
-    timerInterval = setInterval(updateTimer, 1000);
-    startButton.classList.add('timer-active');
-    stopButton.disabled = false;
-    startButton.disabled = true;
-    resetButton.disabled = false;
 }
 
 async function openTaskSelectionModal() {
-    if (isRunning) {
+    if (timer && timer.isRunning) {
         showMessageModal("O rastreador já está em andamento.");
         return;
     }
@@ -231,9 +449,13 @@ async function openTaskSelectionModal() {
 
 function populateTaskSelectionModal(tasks) {
     existingTasksList.innerHTML = '';
-    newTaskInput.value = ''; // Limpa o campo de nova tarefa
+    newTaskInput.value = '';
     if (tasks.length === 0) {
-        existingTasksList.innerHTML = '<p class="p-3 text-center text-sm text-gray-500">Nenhuma tarefa pré-definida.</p>';
+        const p = document.createElement('p');
+        p.className = 'p-3 text-center text-sm text-gray-500';
+        p.textContent = 'Nenhuma tarefa pré-definida.';
+        existingTasksList.innerHTML = '';
+        existingTasksList.appendChild(p);
     } else {
         tasks.forEach(task => {
             const taskElement = document.createElement('div');
@@ -245,37 +467,6 @@ function populateTaskSelectionModal(tasks) {
     }
 }
 
-async function stopTimer() {
-    if (!isRunning) {
-        showMessageModal("Nenhum rastreador está em andamento.");
-        return;
-    }
-
-    clearInterval(timerInterval);
-    isRunning = false;
-    startButton.classList.remove('timer-active');
-    stopButton.disabled = true;
-    startButton.disabled = false;
-
-    const endTime = Date.now();
-    const duration = endTime - startTime;
-    await saveTimeEntry(projectToStart, duration);
-
-    resetTimer();
-}
-
-function resetTimer() {
-    clearInterval(timerInterval);
-    isRunning = false;
-    startTime = null;
-    timerDisplay.textContent = "00:00:00";
-    startButton.classList.remove('timer-active');
-    startButton.disabled = false;
-    stopButton.disabled = true;
-    resetButton.disabled = true;
-    projectInput.value = '';
-}
-
 async function saveTimeEntry(projectName, duration) {
     if (!db || !userId) {
         console.error("Firestore ou userId não estão inicializados.");
@@ -283,13 +474,12 @@ async function saveTimeEntry(projectName, duration) {
     }
     const durationInSeconds = Math.floor(duration / 1000);
     try {
-        // A entrada de tempo da própria empresa é salva com seu ID como companyId.
         await addDoc(collection(db, "timeEntries"), {
             projectName: projectName,
             duration: durationInSeconds,
             timestamp: new Date(),
             companyId: userId,
-            memberId: null, // Indica que a entrada é do admin da empresa
+            memberId: null,
             status: 'approved'
         });
         console.log("Entrada de tempo salva com sucesso.");
@@ -297,14 +487,6 @@ async function saveTimeEntry(projectName, duration) {
         console.error("Erro ao adicionar documento: ", e);
         showMessageModal("Erro ao salvar a entrada de tempo. Tente novamente.");
     }
-}
-
-// Funções de Gerenciamento de Entradas de Tempo
-function formatDuration(seconds) {
-    const h = String(Math.floor(seconds / 3600)).padStart(2, '0');
-    const m = String(Math.floor((seconds % 3600) / 60)).padStart(2, '0');
-    const s = String(seconds % 60).padStart(2, '0');
-    return `${h}:${m}:${s}`;
 }
 
 function renderTimeEntries(entries, membersMap) {
@@ -316,152 +498,82 @@ function renderTimeEntries(entries, membersMap) {
         const memberName = entry.memberId ? (membersMap.get(entry.memberId) || 'Colaborador Desconhecido') : 'Empresa';
         const isPending = entry.status === 'pending';
 
-        let statusBadge = '';
-        let approvalButtons = '';
+        const infoDiv = document.createElement('div');
+        const projectP = document.createElement('p');
+        projectP.className = 'font-bold';
+        projectP.textContent = entry.projectName;
+
         if (isPending) {
-            statusBadge = `<span class="ml-2 text-xs font-semibold bg-yellow-500 text-white px-2 py-1 rounded-full">Pendente</span>`;
-            approvalButtons = `
-                <button class="approve-button text-green-500 hover:bg-gray-200 dark:hover:bg-gray-700 p-2 rounded-full transition-colors" data-id="${entry.id}" title="Aprovar"><i class="fas fa-check-circle pointer-events-none"></i></button>
-                <button class="reject-button text-red-500 hover:bg-gray-200 dark:hover:bg-gray-700 p-2 rounded-full transition-colors" data-id="${entry.id}" title="Rejeitar"><i class="fas fa-times-circle pointer-events-none"></i></button>
-            `;
+            const statusBadge = document.createElement('span');
+            statusBadge.className = 'ml-2 text-xs font-semibold bg-yellow-500 text-white px-2 py-1 rounded-full';
+            statusBadge.textContent = 'Pendente';
+            projectP.appendChild(statusBadge);
         }
 
-        entryElement.innerHTML = `
-            <div>
-                <p class="font-bold">${entry.projectName}${statusBadge}</p>
-                <p class="text-sm text-gray-500 dark:text-gray-400">${new Date(entry.timestamp.seconds * 1000).toLocaleDateString()} - Duração: ${formatDuration(entry.duration)} <span class="font-semibold text-blue-400">(${memberName})</span></p>
-            </div>
-            <div class="flex space-x-2">
-                ${approvalButtons}
-                <button class="edit-button text-blue-500 hover:bg-gray-200 dark:hover:bg-gray-700 p-2 rounded-full transition-colors" data-id="${entry.id}" title="Editar"><i class="fas fa-edit pointer-events-none"></i></button>
-                <button class="delete-button text-red-500 hover:bg-gray-200 dark:hover:bg-gray-700 p-2 rounded-full transition-colors" data-id="${entry.id}" title="Excluir"><i class="fas fa-trash pointer-events-none"></i></button>
-            </div>
-        `;
+        const detailsP = document.createElement('p');
+        detailsP.className = 'text-sm text-gray-500 dark:text-gray-400';
+        detailsP.textContent = `${new Date(entry.timestamp.seconds * 1000).toLocaleDateString()} - Duração: ${formatDuration(entry.duration)} `;
 
-        // Adiciona os event listeners diretamente aos botões criados
-        const editButton = entryElement.querySelector('.edit-button');
-        const deleteButton = entryElement.querySelector('.delete-button');
-        const approveButton = entryElement.querySelector('.approve-button');
-        const rejectButton = entryElement.querySelector('.reject-button');
+        const memberSpan = document.createElement('span');
+        memberSpan.className = 'font-semibold text-blue-400';
+        memberSpan.textContent = `(${memberName})`;
+        detailsP.appendChild(memberSpan);
 
-        editButton.addEventListener('click', () => {
-            openEditModal(entry.id);
-        });
+        infoDiv.append(projectP, detailsP);
 
-        deleteButton.addEventListener('click', async () => {
-            const confirmed = await showMessageModal("Tem certeza que deseja excluir esta entrada de tempo?", 'confirm');
-            if (confirmed) {
-                deleteTimeEntry(entry.id);
-            }
-        });
+        const buttonsDiv = document.createElement('div');
+        buttonsDiv.className = 'flex space-x-2';
 
-        if (approveButton) {
-            approveButton.addEventListener('click', async () => {
-                await updateDoc(doc(db, "timeEntries", entry.id), { status: 'approved' });
-                showMessageModal("Entrada de tempo aprovada com sucesso.");
-            });
+        let approveButton, rejectButton;
+
+        const createIconButton = (title, classes, iconClasses) => {
+            const button = document.createElement('button');
+            button.className = classes;
+            button.dataset.id = entry.id;
+            button.title = title;
+            const icon = document.createElement('i');
+            icon.className = iconClasses + ' pointer-events-none';
+            button.appendChild(icon);
+            return button;
+        };
+
+        if (isPending) {
+            approveButton = createIconButton('Aprovar', 'approve-button text-green-500 hover:bg-gray-200 dark:hover:bg-gray-700 p-2 rounded-full transition-colors', 'fas fa-check-circle');
+            rejectButton = createIconButton('Rejeitar', 'reject-button text-red-500 hover:bg-gray-200 dark:hover:bg-gray-700 p-2 rounded-full transition-colors', 'fas fa-times-circle');
+            buttonsDiv.append(approveButton, rejectButton);
         }
 
-        if (rejectButton) {
-            rejectButton.addEventListener('click', async () => {
-                const confirmed = await showMessageModal("Tem certeza que deseja rejeitar e excluir esta entrada de tempo?", 'confirm');
-                if (confirmed) deleteTimeEntry(entry.id);
-            });
-        }
+        const editButton = createIconButton('Editar', 'edit-button text-blue-500 hover:bg-gray-200 dark:hover:bg-gray-700 p-2 rounded-full transition-colors', 'fas fa-edit');
+        const deleteButton = createIconButton('Excluir', 'delete-button text-red-500 hover:bg-gray-200 dark:hover:bg-gray-700 p-2 rounded-full transition-colors', 'fas fa-trash');
+
+        buttonsDiv.append(editButton, deleteButton);
+        entryElement.append(infoDiv, buttonsDiv);
 
         timeEntriesList.appendChild(entryElement);
     });
 }
 
-function updateChart(data) {
-    const projects = Object.keys(data);
-    const durations = Object.values(data);
-
-    if (chartInstance) {
-        chartInstance.destroy();
-    }
-
-    // Define as cores com base no tema
-    const isDarkMode = document.body.classList.contains('dark');
-    const gridColor = isDarkMode ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.1)';
-    const textColor = isDarkMode ? '#E2E8F0' : '#1A202C';
-
-    const ctx = document.getElementById('project-chart').getContext('2d');
-    chartInstance = new Chart(ctx, {
-        type: 'bar',
-        data: {
-            labels: projects,
-            datasets: [{
-                label: 'Tempo Gasto (em segundos)',
-                data: durations,
-                backgroundColor: 'rgba(59, 130, 246, 0.7)',
-                borderColor: 'rgba(59, 130, 246, 1)',
-                borderWidth: 1
-            }]
-        },
-        options: {
-            responsive: true,
-            scales: {
-                y: {
-                    beginAtZero: true,
-                    title: {
-                        display: true,
-                        text: 'Tempo Total (segundos)',
-                        color: textColor
-                    },
-                    ticks: {
-                        color: textColor
-                    },
-                    grid: {
-                        color: gridColor
-                    }
-                },
-                x: {
-                    ticks: {
-                        color: textColor
-                    },
-                    grid: {
-                        color: gridColor,
-                        drawOnChartArea: false
-                    }
-                }
-            },
-            plugins: {
-                legend: {
-                    labels: {
-                        color: textColor
-                    }
-                },
-                tooltip: {
-                    callbacks: {
-                        label: function (context) {
-                            let label = context.dataset.label || '';
-                            if (label) {
-                                label += ': ';
-                            }
-                            if (context.parsed.y !== null) {
-                                label += formatDuration(context.parsed.y);
-                            }
-                            return label;
-                        }
-                    }
-                }
-            }
-        }
-    });
-}
-
 function populateMemberFilter(membersMap) {
     const currentFilterValue = memberFilter.value;
-    memberFilter.innerHTML = '<option value="all">Todos os Colaboradores</option>';
-    memberFilter.innerHTML += '<option value="company">Apenas Empresa</option>';
+    memberFilter.innerHTML = '';
+
+    const allOption = document.createElement('option');
+    allOption.value = 'all';
+    allOption.textContent = 'Todos os Colaboradores';
+    memberFilter.appendChild(allOption);
+
+    const companyOption = document.createElement('option');
+    companyOption.value = 'company';
+    companyOption.textContent = 'Apenas Empresa';
+    memberFilter.appendChild(companyOption);
+
     membersMap.forEach((name, id) => {
         const option = document.createElement('option');
         option.value = id;
         option.textContent = name;
         memberFilter.appendChild(option);
     });
-    memberFilter.value = currentFilterValue; // Mantém o filtro selecionado após recarregar
+    memberFilter.value = currentFilterValue;
 }
 
 function renderCurrentPage() {
@@ -474,14 +586,17 @@ function renderCurrentPage() {
 
     const totalEntries = filteredEntries.length;
     if (totalEntries === 0) {
-        timeEntriesList.innerHTML = '<p class="text-center text-gray-500">Nenhuma entrada de tempo encontrada.</p>';
+        const p = document.createElement('p');
+        p.className = 'text-center text-gray-500';
+        p.textContent = 'Nenhuma entrada de tempo encontrada.';
+        timeEntriesList.innerHTML = '';
+        timeEntriesList.appendChild(p);
         paginationControls.classList.add('hidden');
         return;
     }
     
     const totalPages = Math.ceil(totalEntries / pageSize);
 
-    // Garante que a página atual não seja inválida após a exclusão de itens
     if (currentPage > totalPages) {
         currentPage = totalPages;
     }
@@ -494,50 +609,54 @@ function renderCurrentPage() {
 
     renderTimeEntries(pageEntries, membersMap);
 
-    // Atualiza os controles de paginação
     paginationControls.classList.toggle('hidden', totalEntries <= pageSize);
     prevPageButton.disabled = currentPage === 1;
     nextPageButton.disabled = currentPage >= totalPages;
 }
 
-// Funções do Firebase
 async function setupTimeEntriesListener() {
     if (!db || !userId) {
         console.error("Firestore não está pronto para o listener.");
         return;
     }
-    // Uma empresa/usuário logado vê as entradas de todos os seus funcionários
     const q = query(
         collection(db, `timeEntries`),
         where("companyId", "==", userId),
         orderBy("timestamp", "desc")
     );
 
-    onSnapshot(q, async (snapshot) => {
-        const membersQuery = query(collection(db, 'members'), where('companyId', '==', userId));
-        const membersSnapshot = await getDocs(membersQuery);
-        membersMap.clear();
-        membersSnapshot.forEach(doc => {
-            membersMap.set(doc.id, doc.data().name);
-        });
-
-        populateMemberFilter(membersMap);
-
+    onSnapshot(q, (snapshot) => {
         if (snapshot.empty) {
             allTimeEntries = [];
             renderCurrentPage();
             return;
         }
-
         allTimeEntries = [];
         snapshot.forEach(doc => {
             allTimeEntries.push({ id: doc.id, ...doc.data() });
         });
 
-        renderCurrentPage(); // Chama a nova função para renderizar a página atual
+        renderCurrentPage();
 
     }, (error) => {
         console.error("Erro no onSnapshot:", error);
+    });
+}
+
+function setupMembersListener() {
+    if (!db || !userId) return;
+    const q = query(collection(db, 'members'), where('companyId', '==', userId));
+    onSnapshot(q, (snapshot) => {
+        const currentFilterValue = memberFilter.value;
+        membersMap.clear();
+        snapshot.forEach(doc => {
+            membersMap.set(doc.id, doc.data().name);
+        });
+        populateMemberFilter(membersMap);
+        memberFilter.value = currentFilterValue;
+
+        // Re-render a página atual, pois os nomes dos membros podem ter mudado
+        renderCurrentPage();
     });
 }
 
@@ -564,7 +683,7 @@ async function setupRealtimeChart() {
                 allProjects[projectName] = duration;
             }
         });
-        updateChart(allProjects);
+        chartInstance = updateChart(chartInstance, allProjects);
     }, (error) => {
         console.error("Erro no onSnapshot para o gráfico:", error);
     });
@@ -582,7 +701,6 @@ async function setupTasksListener() {
     });
 }
 
-// Funções de Edição e Exclusão
 async function deleteTimeEntry(id) {
     if (!db || !userId) {
         showMessageModal("Erro de autenticação. Não foi possível excluir.");
@@ -631,40 +749,35 @@ async function openEditModal(id) {
 }
 
 async function saveEditedEntry() {
-    const saveButton = document.getElementById('save-edit-button');
-    const buttonText = saveButton.querySelector('.button-text');
-    const spinner = saveButton.querySelector('.button-spinner');
-
     const id = editEntryIdInput.value;
     const projectName = editProjectInput.value.trim();
     const dateStr = editDateInput.value;
-    const hours = parseInt(editHoursInput.value) || 0;
-    const minutes = parseInt(editMinutesInput.value) || 0;
-    const seconds = parseInt(editSecondsInput.value) || 0;
-    
+
     if (!projectName || !dateStr) {
         showMessageModal("O nome do projeto e a data são obrigatórios.");
         return;
     }
 
-    // Desabilita o botão e mostra o spinner
-    saveButton.disabled = true;
-    buttonText.classList.add('hidden');
-    spinner.classList.remove('hidden');
-    spinner.style.display = 'inline-block';
+    toggleButtonLoading(saveEditButton, true);
 
-    const totalDuration = hours * 3600 + minutes * 60 + seconds;
-    const date = new Date(dateStr);
-
-    if (!db || !userId) {
-        // Reabilita o botão em caso de erro prematuro
-        saveButton.disabled = false;
-        buttonText.classList.remove('hidden');
-        spinner.style.display = 'none';
-        return;
-    }
-    const docRef = doc(db, `timeEntries`, id);
     try {
+        if (!db || !userId) {
+            showMessageModal("Erro de autenticação. Por favor, faça login novamente.");
+            return; // O finally vai rodar e desativar o loading.
+        }
+
+        const hours = parseInt(editHoursInput.value) || 0;
+        const minutes = parseInt(editMinutesInput.value) || 0;
+        const seconds = parseInt(editSecondsInput.value) || 0;
+        const totalDuration = hours * 3600 + minutes * 60 + seconds;
+
+        // Analisa a string de data (YYYY-MM-DD) para criar um objeto Date
+        // na meia-noite do fuso horário local do usuário, evitando problemas de fuso horário
+        // que podem fazer a data pular para o dia anterior.
+        const [year, month, day] = dateStr.split('-').map(num => parseInt(num, 10));
+        const date = new Date(year, month - 1, day);
+
+        const docRef = doc(db, `timeEntries`, id);
         await updateDoc(docRef, {
             projectName: projectName,
             duration: totalDuration,
@@ -676,184 +789,6 @@ async function saveEditedEntry() {
         console.error("Erro ao atualizar documento:", error);
         showMessageModal("Erro ao salvar a edição. Tente novamente.");
     } finally {
-        // Reabilita o botão e esconde o spinner
-        saveButton.disabled = false;
-        buttonText.classList.remove('hidden');
-        spinner.style.display = 'none';
+        toggleButtonLoading(saveEditButton, false);
     }
 }
-
-// Event Listeners
-startButton.addEventListener('click', openTaskSelectionModal);
-stopButton.addEventListener('click', stopTimer);
-resetButton.addEventListener('click', resetTimer);
-saveEditButton.addEventListener('click', saveEditedEntry);
-cancelEditButton.addEventListener('click', () => editModal.classList.add('hidden'));
-
-memberFilter.addEventListener('change', () => {
-    selectedMemberId = memberFilter.value;
-    currentPage = 1; // Reseta para a primeira página ao mudar o filtro
-    renderCurrentPage();
-});
-
-cancelTaskSelectionButton.addEventListener('click', () => {
-    taskSelectionModal.classList.add('hidden');
-});
-
-existingTasksList.addEventListener('click', (e) => {
-    if (e.target && e.target.dataset.taskName) {
-        newTaskInput.value = e.target.dataset.taskName;
-        // Opcional: adicionar um feedback visual para a tarefa selecionada
-    }
-});
-
-startTimerConfirmButton.addEventListener('click', () => {
-    const selectedTask = newTaskInput.value.trim();
-    if (selectedTask === "") {
-        showMessageModal("Por favor, selecione ou digite uma tarefa.");
-        return;
-    }
-    taskSelectionModal.classList.add('hidden');
-    _startTimerWithTask(selectedTask);
-});
-
-// UI Interações
-menuToggle.addEventListener('click', () => {
-    sidebar.classList.toggle('active');
-    menuToggle.classList.toggle('active');
-    sidebarOverlay.classList.toggle('active');
-});
-
-sidebarOverlay.addEventListener('click', () => {
-    sidebar.classList.remove('active');
-    menuToggle.classList.remove('active');
-    sidebarOverlay.classList.remove('active');
-});
-
-profileToggle.addEventListener('click', (e) => {
-    e.stopPropagation();
-    profileModal.classList.toggle('hidden');
-});
-
-document.addEventListener('click', (e) => {
-    if (!profileModal.contains(e.target) && !profileToggle.contains(e.target)) {
-        profileModal.classList.add('hidden');
-    }
-});
-
-shareToggle.addEventListener('click', () => {
-    shareModal.classList.remove('hidden');
-});
-
-closeShareModalButton.addEventListener('click', () => {
-    shareModal.classList.add('hidden');
-});
-
-copyAppIdButton.addEventListener('click', async () => {
-    const appIdText = appIdDisplay.textContent;
-    try {
-        await navigator.clipboard.writeText(appIdText);
-        showMessageModal("ID do aplicativo copiado!");
-    } catch (err) {
-        console.error('Erro ao copiar ID: ', err);
-        showMessageModal('Não foi possível copiar o ID.');
-    }
-});
-
-showLoginModalButton.addEventListener('click', () => {
-    loginModal.classList.remove('hidden');
-    profileModal.classList.add('hidden');
-});
-
-showRegisterModalButton.addEventListener('click', () => {
-    registerModal.classList.remove('hidden');
-    profileModal.classList.add('hidden');
-});
-
-cancelLoginButton.addEventListener('click', () => {
-    loginModal.classList.add('hidden');
-});
-
-cancelRegisterButton.addEventListener('click', () => {
-    registerModal.classList.add('hidden');
-});
-
-forgotPasswordLink.addEventListener('click', (e) => {
-    e.preventDefault();
-    loginModal.classList.add('hidden');
-    forgotPasswordModal.classList.remove('hidden');
-});
-
-cancelForgotButton.addEventListener('click', () => {
-    forgotPasswordModal.classList.add('hidden');
-});
-
-forgotPasswordForm.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const email = forgotEmailInput.value;
-    try {
-        await sendPasswordResetEmail(auth, email);
-        forgotPasswordModal.classList.add('hidden');
-        showMessageModal("Um link para redefinição de senha foi enviado para o seu e-mail, caso ele esteja cadastrado.");
-        forgotPasswordForm.reset();
-    } catch (error) {
-        console.error("Erro ao enviar e-mail de redefinição de senha:", error);
-        // Mostra uma mensagem genérica para não revelar se um e-mail existe ou não no sistema
-        showMessageModal("Se o e-mail estiver correto e cadastrado, um link de redefinição será enviado.");
-    }
-});
-
-loginForm.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const email = loginEmailInput.value;
-    const password = loginPasswordInput.value;
-
-    try {
-        await signInWithEmailAndPassword(auth, email, password);
-        showMessageModal("Login realizado com sucesso!");
-        loginForm.reset();
-    } catch (error) {
-        console.error("Erro no login:", error);
-        showMessageModal(`Erro no login: ${error.message.replace('Firebase: ', '')}`);
-    }
-});
-
-registerForm.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const email = registerForm['register-email'].value;
-    const password = registerForm['register-password'].value;
-
-    try {
-        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-        await sendEmailVerification(userCredential.user);
-        registerForm.reset();
-        showMessageModal("Cadastro realizado com sucesso! Um e-mail de verificação foi enviado para sua caixa de entrada.");
-    } catch (error) {
-        console.error("Erro no cadastro:", error);
-        showMessageModal(`Erro no cadastro: ${error.message.replace('Firebase: ', '')}`);
-    }
-});
-
-logoutButton.addEventListener('click', async () => {
-    try {
-        await signOut(auth);
-    } catch (error) {
-        console.error("Erro ao fazer logout:", error);
-        showMessageModal("Erro ao sair. Tente novamente.");
-    }
-});
-
-prevPageButton.addEventListener('click', () => {
-    if (currentPage > 1) {
-        currentPage--;
-        renderCurrentPage();
-    }
-});
-
-nextPageButton.addEventListener('click', () => {
-    const totalPages = Math.ceil(allTimeEntries.length / pageSize);
-    if (currentPage < totalPages) {
-        currentPage++;
-        renderCurrentPage();
-    }
-});
