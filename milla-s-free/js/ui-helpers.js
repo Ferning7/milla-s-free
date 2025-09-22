@@ -14,31 +14,42 @@ export function showMessageModal(message, type = 'alert') {
     const messageText = document.getElementById('message-text');
     const messageOkButton = document.getElementById('message-ok');
     const messageCancelButton = document.getElementById('message-cancel');
-
-    if (!messageModal || !messageText || !messageOkButton || !messageCancelButton) {
-        console.error('Elementos do modal de mensagem não encontrados no DOM.');
+ 
+    if (!messageModal || !messageText || !messageOkButton) {
+        console.error('Elementos essenciais do modal de mensagem (modal, text, ok) não encontrados no DOM.');
+        return Promise.resolve(false);
+    }
+ 
+    if (type === 'confirm' && !messageCancelButton) {
+        console.error('Botão de cancelar do modal não encontrado, mas o tipo é "confirm".');
         return Promise.resolve(false);
     }
 
     return new Promise((resolve) => {
         messageText.textContent = message;
-
+ 
         messageOkButton.textContent = (type === 'confirm') ? 'Confirmar' : 'OK';
-        messageCancelButton.classList.toggle('hidden', type !== 'confirm');
-
+        if (messageCancelButton) {
+            messageCancelButton.classList.toggle('hidden', type !== 'confirm');
+        }
+ 
         messageModal.classList.remove('hidden');
-
+ 
         const cleanup = (result) => {
             messageModal.classList.add('hidden');
             messageOkButton.removeEventListener('click', okListener);
-            messageCancelButton.removeEventListener('click', cancelListener);
+            if (messageCancelButton) {
+                messageCancelButton.removeEventListener('click', cancelListener);
+            }
             resolve(result);
         };
-
+ 
         const okListener = () => cleanup(true);
         const cancelListener = () => cleanup(false);
-
+ 
         messageOkButton.addEventListener('click', okListener, { once: true });
-        messageCancelButton.addEventListener('click', cancelListener, { once: true });
+        if (type === 'confirm' && messageCancelButton) {
+            messageCancelButton.addEventListener('click', cancelListener, { once: true });
+        }
     });
 }

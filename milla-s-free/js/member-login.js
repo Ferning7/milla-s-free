@@ -17,8 +17,6 @@ const memberLoginForm = document.getElementById('member-login-form');
 const loginTokenInput = document.getElementById('login-token');
 const messageModal = document.getElementById('message-modal');
 
-messageOkButton.addEventListener('click', () => messageModal.classList.add('hidden'));
-
 memberLoginForm.addEventListener('submit', async (e) => {
     e.preventDefault();
     const token = loginTokenInput.value.trim();
