@@ -124,3 +124,8 @@ body {
 .button-spinner {
     display: none;
 }
+
+.token-copied-glow {
+    box-shadow: 0 0 10px 3px rgba(59, 130, 246, 0.6); /* Brilho azul */
+    transition: box-shadow 0.2s ease-in-out;
+}

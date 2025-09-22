@@ -5,18 +5,23 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dashboard da Empresa - Milla's Free</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class'
+        }
+    </script>
     <link rel="stylesheet" href="../css/styles.css">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
 </head>
-<body class="dark">
+<body>
 
     <div class="flex flex-col min-h-screen">
         <!-- Header -->
-        <header class="header flex items-center justify-between p-4 shadow-lg text-white">
+        <header class="header relative flex items-center justify-between p-4 shadow-lg text-white">
             <a href="index.html" class="text-xl p-2 rounded-full hover:bg-white hover:text-blue-500 transition-colors">
                 <i class="fas fa-arrow-left"></i>
             </a>
-            <h1 class="text-2xl font-bold mx-auto">Painel da Empresa</h1>
+            <h1 class="absolute left-1/2 -translate-x-1/2 text-2xl font-bold">Painel da Empresa</h1>
             <button id="theme-toggle" aria-label="Alternar tema claro/escuro"
                 class="text-xl p-2 rounded-full hover:bg-white hover:text-blue-500 transition-colors">
                 <i class="fas fa-sun"></i>
@@ -31,14 +36,52 @@
                         <h2 class="text-3xl font-bold">Gerenciar Colaboradores</h2>
                         <p id="company-email-display" class="text-gray-400"></p>
                     </div>
-                    <button id="add-member-button" class="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-bold flex items-center gap-2">
-                        <i class="fas fa-plus"></i> Adicionar Colaborador
-                    </button>
+                    <div class="flex items-center gap-4">
+                        <div class="relative">
+                            <input type="search" id="search-member-input" placeholder="Buscar por nome ou e-mail..."
+                                class="w-64 p-2 rounded-lg bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors duration-200">
+                            <i class="fas fa-search absolute right-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
+                        </div>
+                        <button id="add-member-button" class="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-bold flex items-center gap-2">
+                            <i class="fas fa-plus"></i> Adicionar Colaborador
+                        </button>
+                    </div>
                 </div>
 
                 <!-- Members List -->
                 <div id="members-list" class="space-y-4">
                     <!-- Member items will be injected here by JS -->
+                </div>
+
+                <!-- Members Pagination -->
+                <div id="members-pagination-controls" class="flex justify-between items-center mt-6 hidden">
+                    <button id="prev-members-page-button"
+                        class="px-4 py-2 rounded-lg bg-gray-500 hover:bg-gray-600 text-white font-bold disabled:opacity-50 disabled:cursor-not-allowed">Anterior</button>
+                    <button id="next-members-page-button"
+                        class="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-bold disabled:opacity-50 disabled:cursor-not-allowed">Próxima</button>
+                </div>
+
+                <!-- Task Management Section -->
+                <div class="mt-12">
+                    <div class="flex justify-between items-center mb-8">
+                        <div>
+                            <h2 class="text-3xl font-bold">Tarefas Pré-definidas</h2>
+                            <p class="text-gray-400">Crie tarefas para seus colaboradores selecionarem.</p>
+                        </div>
+                        <form id="add-task-form" class="flex items-center gap-4" autocomplete="off">
+                            <input type="text" id="new-task-name" name="dashboard_task_name" placeholder="Nome da nova tarefa" required autocomplete="off"
+                                class="w-64 p-2 rounded-lg bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors duration-200">
+                            <button type="submit"
+                                class="px-4 py-2 rounded-lg bg-green-600 hover:bg-green-700 text-white font-bold flex items-center gap-2">
+                                <i class="fas fa-plus"></i> Adicionar Tarefa
+                            </button>
+                        </form>
+                    </div>
+
+                    <!-- Tasks List -->
+                    <div id="tasks-list" class="space-y-2">
+                        <!-- Task items will be injected here by JS -->
+                    </div>
                 </div>
             </div>
         </main>
@@ -56,11 +99,11 @@
             <form id="create-member-form">
                 <div class="mb-4">
                     <label for="member-name" class="block text-sm font-medium mb-1">Nome do Colaborador</label>
-                    <input id="member-name" type="text" required class="w-full p-2 rounded-lg bg-gray-200 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 focus:outline-none focus:border-blue-500">
+                    <input id="member-name" type="text" required class="w-full p-2 rounded-lg bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors duration-200">
                 </div>
                 <div class="mb-6">
                     <label for="member-email" class="block text-sm font-medium mb-1">Email do Colaborador</label>
-                    <input id="member-email" type="email" required class="w-full p-2 rounded-lg bg-gray-200 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 focus:outline-none focus:border-blue-500">
+                    <input id="member-email" type="email" required class="w-full p-2 rounded-lg bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors duration-200">
                 </div>
                 <div class="flex justify-end space-x-4">
                     <button type="button" id="cancel-create-member-button" class="px-4 py-2 rounded-lg bg-gray-500 hover:bg-gray-600 text-white font-bold">Cancelar</button>
@@ -81,15 +124,36 @@
                 <input type="hidden" id="edit-member-id">
                 <div class="mb-4">
                     <label for="edit-member-name" class="block text-sm font-medium mb-1">Nome do Colaborador</label>
-                    <input id="edit-member-name" type="text" required class="w-full p-2 rounded-lg bg-gray-200 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 focus:outline-none focus:border-blue-500">
+                    <input id="edit-member-name" type="text" required class="w-full p-2 rounded-lg bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors duration-200">
                 </div>
                 <div class="mb-6">
                     <label for="edit-member-email" class="block text-sm font-medium mb-1">Email do Colaborador</label>
-                    <input id="edit-member-email" type="email" required class="w-full p-2 rounded-lg bg-gray-200 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 focus:outline-none focus:border-blue-500">
+                    <input id="edit-member-email" type="email" required class="w-full p-2 rounded-lg bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors duration-200">
                 </div>
                 <div class="flex justify-end space-x-4">
                     <button type="button" id="cancel-edit-member-button" class="px-4 py-2 rounded-lg bg-gray-500 hover:bg-gray-600 text-white font-bold">Cancelar</button>
                     <button type="submit" id="save-edit-member-button" class="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-bold w-24 text-center">
+                        <span class="button-text">Salvar</span>
+                        <i class="fas fa-spinner fa-spin hidden button-spinner"></i>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal de Editar Tarefa -->
+    <div id="edit-task-modal" class="fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center hidden z-50">
+        <div class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-xl w-full max-w-sm">
+            <h3 class="text-xl font-bold mb-4">Editar Tarefa</h3>
+            <form id="edit-task-form">
+                <input type="hidden" id="edit-task-id">
+                <div class="mb-6">
+                    <label for="edit-task-name" class="block text-sm font-medium mb-1">Nome da Tarefa</label>
+                    <input id="edit-task-name" type="text" required class="w-full p-2 rounded-lg bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors duration-200">
+                </div>
+                <div class="flex justify-end space-x-4">
+                    <button type="button" id="cancel-edit-task-button" class="px-4 py-2 rounded-lg bg-gray-500 hover:bg-gray-600 text-white font-bold">Cancelar</button>
+                    <button type="submit" id="save-edit-task-button" class="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-bold w-24 text-center">
                         <span class="button-text">Salvar</span>
                         <i class="fas fa-spinner fa-spin hidden button-spinner"></i>
                     </button>

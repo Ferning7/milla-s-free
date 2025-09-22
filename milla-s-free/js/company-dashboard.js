@@ -8,15 +8,19 @@ setLogLevel('debug');
 
 // Aplica o tema salvo no localStorage ao carregar a página
 const savedTheme = localStorage.getItem('theme');
-if (savedTheme === 'light') {
-    document.body.classList.remove('dark');
+if (savedTheme === 'dark') {
+    document.body.classList.add('dark');
 } else {
-    document.body.classList.add('dark'); // Garante que o padrão seja escuro
+    document.body.classList.remove('dark'); // Garante que o padrão seja claro
 }
 
 // Variáveis globais
 let app, auth, db;
 let userId;
+let allMembers = []; // Armazena a lista completa de colaboradores
+let allTasks = []; // Armazena a lista completa de tarefas
+let membersCurrentPage = 1;
+const membersPageSize = 5;
 
 // Elementos da UI
 const companyEmailDisplay = document.getElementById('company-email-display');
@@ -38,6 +42,21 @@ const editMemberIdInput = document.getElementById('edit-member-id');
 const editMemberNameInput = document.getElementById('edit-member-name');
 const editMemberEmailInput = document.getElementById('edit-member-email');
 const themeToggle = document.getElementById('theme-toggle');
+const searchMemberInput = document.getElementById('search-member-input');
+const membersPaginationControls = document.getElementById('members-pagination-controls');
+const prevMembersPageButton = document.getElementById('prev-members-page-button');
+const nextMembersPageButton = document.getElementById('next-members-page-button');
+
+const addTaskForm = document.getElementById('add-task-form');
+const newTaskNameInput = document.getElementById('new-task-name');
+const tasksList = document.getElementById('tasks-list');
+
+const editTaskModal = document.getElementById('edit-task-modal');
+const editTaskForm = document.getElementById('edit-task-form');
+const cancelEditTaskButton = document.getElementById('cancel-edit-task-button');
+const saveEditTaskButton = document.getElementById('save-edit-task-button');
+const editTaskIdInput = document.getElementById('edit-task-id');
+const editTaskNameInput = document.getElementById('edit-task-name');
 
 // Funções de UI
 function showMessageModal(message, type = 'alert') {
@@ -86,6 +105,32 @@ themeToggle.addEventListener('click', () => {
     localStorage.setItem('theme', currentTheme);
 });
 
+addTaskForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const taskName = newTaskNameInput.value.trim();
+    if (taskName && userId) {
+        // Validação para impedir tarefas duplicadas (case-insensitive)
+        const isDuplicate = allTasks.some(task => task.name.toLowerCase() === taskName.toLowerCase());
+        if (isDuplicate) {
+            showMessageModal(`A tarefa "${taskName}" já existe.`);
+            return;
+        }
+
+        try {
+            await addDoc(collection(db, "tasks"), {
+                name: taskName,
+                companyId: userId,
+                createdAt: new Date()
+            });
+        } catch (error) {
+            console.error("Erro ao adicionar tarefa:", error);
+            showMessageModal("Não foi possível adicionar a tarefa.");
+        } finally {
+            newTaskNameInput.value = '';
+        }
+    }
+});
+
 // Inicialização
 async function initializeDashboard() {
     app = initializeApp(firebaseConfig);
@@ -97,11 +142,69 @@ async function initializeDashboard() {
             userId = user.uid;
             companyEmailDisplay.textContent = `Logado como: ${user.email}`;
             setupMembersListener();
+            setupTasksListener();
         } else {
             // Se não estiver logado, redireciona para a página inicial
             window.location.href = 'index.html';
         }
     });
+}
+
+function renderMembers() {
+    const searchTerm = searchMemberInput.value.toLowerCase();
+    const filteredMembers = allMembers.filter(member =>
+        member.name.toLowerCase().includes(searchTerm) ||
+        member.email.toLowerCase().includes(searchTerm)
+    );
+
+    membersList.innerHTML = '';
+
+    if (filteredMembers.length === 0) {
+        if (searchTerm) {
+            membersList.innerHTML = `<p class="text-center text-gray-500">Nenhum colaborador encontrado para "${searchTerm}".</p>`;
+        } else {
+            membersList.innerHTML = '<p class="text-center text-gray-500">Nenhum colaborador cadastrado.</p>';
+        }
+        membersPaginationControls.classList.add('hidden');
+        return;
+    }
+
+    const totalPages = Math.ceil(filteredMembers.length / membersPageSize);
+    if (membersCurrentPage > totalPages) {
+        membersCurrentPage = totalPages;
+    }
+    if (membersCurrentPage < 1) {
+        membersCurrentPage = 1;
+    }
+
+    const startIndex = (membersCurrentPage - 1) * membersPageSize;
+    const pageMembers = filteredMembers.slice(startIndex, startIndex + membersPageSize);
+
+    pageMembers.forEach(member => {
+        const memberElement = document.createElement('div');
+        memberElement.className = 'bg-white dark:bg-gray-800 p-4 rounded-lg flex justify-between items-center';
+        memberElement.innerHTML = `
+            <div>
+                <p class="font-bold text-lg">${member.name}</p>
+                <p class="text-sm text-gray-400">${member.email}</p>
+            </div>
+            <div class="flex items-center gap-4">
+                <div class="relative">
+                    <input type="text" readonly value="${member.loginToken}" class="token-input bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded p-1 text-xs w-48 font-mono select-all">
+                </div>
+                <button class="copy-token-button px-3 py-1 bg-blue-500 hover:bg-blue-600 text-white rounded-lg text-sm" data-token="${member.loginToken}">Copiar</button>
+                <button title="Editar Colaborador" class="edit-member-button text-blue-500 hover:bg-gray-200 dark:hover:bg-gray-700 p-2 rounded-full transition-colors" data-id="${member.id}" data-name="${member.name}" data-email="${member.email}"><i class="fas fa-edit"></i></button>
+                <button title="Gerar Novo Token" class="regenerate-token-button text-yellow-500 hover:bg-gray-200 dark:hover:bg-gray-700 p-2 rounded-full transition-colors" data-id="${member.id}" data-name="${member.name || 'este colaborador'}"><i class="fas fa-sync-alt"></i></button>
+                <button title="Excluir Colaborador" class="delete-member-button text-red-500 hover:bg-gray-200 dark:hover:bg-gray-700 p-2 rounded-full transition-colors" data-id="${member.id}" data-name="${member.name || 'este colaborador'}"><i class="fas fa-trash"></i></button>
+            </div>
+        `;
+        membersList.appendChild(memberElement);
+    });
+
+    // Atualiza os controles de paginação
+    membersPaginationControls.classList.toggle('hidden', filteredMembers.length <= membersPageSize);
+    prevMembersPageButton.disabled = membersCurrentPage === 1;
+    nextMembersPageButton.disabled = membersCurrentPage >= totalPages;
 }
 
 // Listener para a lista de colaboradores
@@ -118,37 +221,54 @@ function setupMembersListener() {
 
     onSnapshot(q, (snapshot) => {
         console.log(`Snapshot recebido, encontrados ${snapshot.size} documentos.`);
-        if (snapshot.empty) {
-            membersList.innerHTML = '<p class="text-center text-gray-500">Nenhum colaborador encontrado.</p>';
-            return;
-        }
-
-        membersList.innerHTML = ''; // Limpa a lista apenas quando temos dados
+        allMembers = [];
         snapshot.forEach(doc => {
-            const member = doc.data();
-            const memberElement = document.createElement('div');
-            memberElement.className = 'bg-gray-800 p-4 rounded-lg flex justify-between items-center';
-            memberElement.innerHTML = `
-                <div>
-                    <p class="font-bold text-lg">${member.name}</p>
-                    <p class="text-sm text-gray-400">${member.email}</p>
-                </div>
-                <div class="flex items-center gap-4">
-                    <div class="relative">
-                        <input type="text" readonly value="${member.loginToken}" class="token-input bg-gray-700 border border-gray-600 rounded p-1 text-xs w-48 font-mono">
-                    </div>
-                    <button class="copy-token-button px-3 py-1 bg-blue-500 hover:bg-blue-600 text-white rounded-lg text-sm" data-token="${member.loginToken}">Copiar</button>
-                    <button title="Editar Colaborador" class="edit-member-button text-blue-500 hover:text-blue-700" data-id="${doc.id}" data-name="${member.name}" data-email="${member.email}"><i class="fas fa-edit"></i></button>
-                    <button title="Gerar Novo Token" class="regenerate-token-button text-yellow-500 hover:text-yellow-700" data-id="${doc.id}" data-name="${member.name || 'este colaborador'}"><i class="fas fa-sync-alt"></i></button>
-                    <button title="Excluir Colaborador" class="delete-member-button text-red-500 hover:text-red-700" data-id="${doc.id}" data-name="${member.name || 'este colaborador'}"><i class="fas fa-trash"></i></button>
-                </div>
-            `;
-            membersList.appendChild(memberElement);
+            allMembers.push({ id: doc.id, ...doc.data() });
         });
+        // Ordena a lista de membros por nome
+        allMembers.sort((a, b) => a.name.localeCompare(b.name));
+        renderMembers(); // Renderiza a lista (filtrada ou não)
     }, (error) => {
         console.error("Erro ao buscar colaboradores:", error);
         membersList.innerHTML = '<p class="text-center text-red-500">Erro ao carregar colaboradores. Verifique o console para mais detalhes.</p>';
         showMessageModal("Ocorreu um erro ao buscar os colaboradores. Verifique se as regras de segurança do Firestore permitem a leitura da coleção 'members'.");
+    });
+}
+
+// Listener para a lista de tarefas
+function setupTasksListener() {
+    if (!db || !userId) return;
+
+    const q = query(collection(db, "tasks"), where("companyId", "==", userId), orderBy("name"));
+
+    onSnapshot(q, (snapshot) => {
+        tasksList.innerHTML = '';
+        allTasks = []; // Limpa a lista antes de preencher
+        if (snapshot.empty) {
+            tasksList.innerHTML = '<p class="text-center text-gray-500 text-sm">Nenhuma tarefa pré-definida.</p>';
+            return;
+        }
+        snapshot.forEach(doc => {
+            const task = doc.data();
+            allTasks.push({ id: doc.id, ...task });
+            const taskElement = document.createElement('div');
+            taskElement.className = 'bg-white dark:bg-gray-800 p-3 rounded-lg flex justify-between items-center';
+            taskElement.innerHTML = `
+                <span>${task.name}</span>
+                <div class="flex items-center gap-2">
+                    <button title="Editar Tarefa" class="edit-task-button text-blue-500 hover:bg-gray-200 dark:hover:bg-gray-700 p-2 rounded-full transition-colors" data-id="${doc.id}" data-name="${task.name}">
+                        <i class="fas fa-edit"></i>
+                    </button>
+                    <button title="Excluir Tarefa" class="delete-task-button text-red-500 hover:bg-gray-200 dark:hover:bg-gray-700 p-2 rounded-full transition-colors" data-id="${doc.id}" data-name="${task.name}">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </div>
+            `;
+            tasksList.appendChild(taskElement);
+        });
+    }, (error) => {
+        console.error("Erro ao buscar tarefas:", error);
+        tasksList.innerHTML = '<p class="text-center text-red-500">Erro ao carregar tarefas.</p>';
     });
 }
 
@@ -206,6 +326,14 @@ membersList.addEventListener('click', async (e) => {
         const token = button.dataset.token;
         navigator.clipboard.writeText(token).then(() => {
             showMessageModal('Token copiado para a área de transferência!');
+            // Adiciona feedback visual no campo do token
+            const tokenInput = button.previousElementSibling.querySelector('.token-input');
+            if (tokenInput) {
+                tokenInput.classList.add('token-copied-glow');
+                setTimeout(() => {
+                    tokenInput.classList.remove('token-copied-glow');
+                }, 1500); // O brilho dura 1.5 segundos
+            }
         }).catch(err => {
             console.error('Erro ao copiar token: ', err);
             showMessageModal('Não foi possível copiar o token.');
@@ -291,6 +419,108 @@ editMemberForm.addEventListener('submit', async (e) => {
 
 cancelEditMemberButton.addEventListener('click', () => {
     editMemberModal.classList.add('hidden');
+});
+
+tasksList.addEventListener('click', async (e) => {
+    const button = e.target.closest('button');
+    if (!button) return;
+
+    // Handle Edit Task
+    if (button.classList.contains('edit-task-button')) {
+        const taskId = button.dataset.id;
+        const taskName = button.dataset.name;
+
+        editTaskIdInput.value = taskId;
+        editTaskNameInput.value = taskName;
+
+        editTaskModal.classList.remove('hidden');
+    }
+
+    // Handle Delete Task
+    if (button.classList.contains('delete-task-button')) {
+        const taskId = button.dataset.id;
+        const taskName = button.dataset.name;
+        const confirmed = await showMessageModal(`Tem certeza que deseja excluir a tarefa "${taskName}"?`, 'confirm');
+        if (confirmed) {
+            await deleteDoc(doc(db, "tasks", taskId));
+            showMessageModal("Tarefa excluída com sucesso.");
+        }
+    }
+});
+
+cancelEditTaskButton.addEventListener('click', () => {
+    editTaskModal.classList.add('hidden');
+});
+
+editTaskForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+
+    const taskId = editTaskIdInput.value;
+    const newName = editTaskNameInput.value.trim();
+
+    if (!newName) {
+        showMessageModal("O nome da tarefa não pode ser vazio.");
+        return;
+    }
+
+    // Validação para impedir tarefas duplicadas (case-insensitive), ignorando a própria tarefa
+    const isDuplicate = allTasks.some(task =>
+        task.name.toLowerCase() === newName.toLowerCase() && task.id !== taskId
+    );
+
+    if (isDuplicate) {
+        showMessageModal(`A tarefa "${newName}" já existe.`);
+        return;
+    }
+
+    const buttonText = saveEditTaskButton.querySelector('.button-text');
+    const spinner = saveEditTaskButton.querySelector('.button-spinner');
+
+    saveEditTaskButton.disabled = true;
+    buttonText.classList.add('hidden');
+    spinner.classList.remove('hidden');
+    spinner.style.display = 'inline-block';
+
+    const taskDocRef = doc(db, "tasks", taskId);
+
+    try {
+        await updateDoc(taskDocRef, { name: newName });
+        editTaskModal.classList.add('hidden');
+        showMessageModal("Tarefa atualizada com sucesso.");
+    } catch (error) {
+        console.error("Erro ao atualizar tarefa:", error);
+        showMessageModal("Erro ao atualizar a tarefa. Tente novamente.");
+    } finally {
+        saveEditTaskButton.disabled = false;
+        buttonText.classList.remove('hidden');
+        spinner.style.display = 'none';
+    }
+});
+
+searchMemberInput.addEventListener('input', () => {
+    membersCurrentPage = 1;
+    renderMembers();
+});
+
+prevMembersPageButton.addEventListener('click', () => {
+    if (membersCurrentPage > 1) {
+        membersCurrentPage--;
+        renderMembers();
+    }
+});
+
+nextMembersPageButton.addEventListener('click', () => {
+    const searchTerm = searchMemberInput.value.toLowerCase();
+    const filteredMembers = allMembers.filter(member =>
+        member.name.toLowerCase().includes(searchTerm) ||
+        member.email.toLowerCase().includes(searchTerm)
+    );
+    const totalPages = Math.ceil(filteredMembers.length / membersPageSize);
+
+    if (membersCurrentPage < totalPages) {
+        membersCurrentPage++;
+        renderMembers();
+    }
 });
 
 // Iniciar a página

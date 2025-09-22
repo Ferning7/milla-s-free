@@ -1,7 +1,7 @@
 import firebaseConfig from './FireBase.js';
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
 import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-import { getFirestore, doc, getDoc, collection, query, where, addDoc, onSnapshot, orderBy } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { getFirestore, doc, getDoc, collection, query, where, addDoc, onSnapshot, orderBy, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // Aplica o tema salvo no localStorage ao carregar a página
 const savedTheme = localStorage.getItem('theme');
@@ -50,6 +50,7 @@ themeToggle.addEventListener('click', () => {
     body.classList.toggle('dark');
     const currentTheme = body.classList.contains('dark') ? 'dark' : 'light';
     localStorage.setItem('theme', currentTheme);
+    updateChart(allProjects); // Re-renderiza o gráfico com as cores do novo tema
 });
 
 // Lógica de Autenticação e Inicialização
@@ -114,14 +115,15 @@ function updateTimer() {
 
 async function startTimer() {
     if (isRunning) return;
-    const projectName = projectInput.value.trim();
-    if (projectName === "") {
-        showMessageModal("Por favor, insira o nome do projeto ou tarefa.");
+
+    const taskName = projectInput.value.trim();
+    if (taskName === "") {
+        showMessageModal("Por favor, selecione ou digite o nome da tarefa.");
         return;
     }
     isRunning = true;
     startTime = Date.now();
-    projectToStart = projectName;
+    projectToStart = taskName;
     timerInterval = setInterval(updateTimer, 1000);
     startButton.disabled = true;
     stopButton.disabled = false;
@@ -134,7 +136,7 @@ async function stopTimer() {
     isRunning = false;
     const endTime = Date.now();
     const duration = endTime - startTime;
-    await saveTimeEntry(projectToStart, duration);
+    await saveTimeEntry(projectToStart, duration); // projectToStart holds the task name
     resetTimer();
 }
 
@@ -151,6 +153,7 @@ function resetTimer() {
 
 async function saveTimeEntry(projectName, duration) {
     if (!db || !memberProfile) return;
+
     const durationInSeconds = Math.floor(duration / 1000);
     try {
         await addDoc(collection(db, "timeEntries"), {
@@ -158,6 +161,7 @@ async function saveTimeEntry(projectName, duration) {
             companyId: memberProfile.companyId,
             projectName: projectName,
             duration: durationInSeconds,
+            status: 'pending', // Tarefas de colaboradores agora são sempre 'pending' para aprovação
             timestamp: new Date(),
         });
     } catch (e) {
@@ -182,7 +186,7 @@ function renderTimeEntries(entries) {
     }
     entries.forEach(entry => {
         const entryElement = document.createElement('div');
-        entryElement.className = 'p-4 bg-gray-100 dark:bg-gray-800 rounded-lg shadow-sm';
+        entryElement.className = 'p-4 bg-white dark:bg-gray-800 rounded-lg shadow-sm';
         entryElement.innerHTML = `
             <p class="font-bold">${entry.projectName}</p>
             <p class="text-sm text-gray-500 dark:text-gray-400">${new Date(entry.timestamp.seconds * 1000).toLocaleDateString()} - Duração: ${formatDuration(entry.duration)}</p>
@@ -194,6 +198,12 @@ function renderTimeEntries(entries) {
 function updateChart(data) {
     const projects = Object.keys(data);
     const durations = Object.values(data);
+
+    // Define as cores com base no tema
+    const isDarkMode = document.body.classList.contains('dark');
+    const gridColor = isDarkMode ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.1)';
+    const textColor = isDarkMode ? '#E2E8F0' : '#1A202C';
+
     if (chartInstance) {
         chartInstance.destroy();
     }
@@ -210,8 +220,37 @@ function updateChart(data) {
         },
         options: {
             responsive: true,
-            scales: { y: { beginAtZero: true, title: { display: true, text: 'Tempo Total (segundos)' } } },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    title: {
+                        display: true,
+                        text: 'Tempo Total (segundos)',
+                        color: textColor
+                    },
+                    ticks: {
+                        color: textColor
+                    },
+                    grid: {
+                        color: gridColor
+                    }
+                },
+                x: {
+                    ticks: {
+                        color: textColor
+                    },
+                    grid: {
+                        color: gridColor,
+                        drawOnChartArea: false
+                    }
+                }
+            },
             plugins: {
+                legend: {
+                    labels: {
+                        color: textColor
+                    }
+                },
                 tooltip: {
                     callbacks: {
                         label: (context) => `Duração: ${formatDuration(context.parsed.y)}`

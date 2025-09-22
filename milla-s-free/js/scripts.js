@@ -151,7 +151,6 @@ async function initializeFirebase() {
 
                     // Habilita funcionalidades do app
                     projectInput.disabled = false;
-                    startButton.disabled = isRunning;
 
                     // Esconde modais de autenticação
                     loginModal.classList.add('hidden');
@@ -309,7 +308,8 @@ async function saveTimeEntry(projectName, duration) {
             duration: durationInSeconds,
             timestamp: new Date(),
             companyId: userId,
-            memberId: null // Indica que a entrada é do admin da empresa, não de um colaborador.
+            memberId: null, // Indica que a entrada é do admin da empresa
+            status: 'approved'
         });
         console.log("Entrada de tempo salva com sucesso.");
     } catch (e) {
@@ -330,24 +330,38 @@ function renderTimeEntries(entries, membersMap) {
     timeEntriesList.innerHTML = '';
     entries.forEach(entry => {
         const entryElement = document.createElement('div');
-        entryElement.className = 'flex items-center justify-between p-4 bg-gray-100 dark:bg-gray-800 rounded-lg shadow-sm';
-        
+        entryElement.className = 'flex items-center justify-between p-4 bg-white dark:bg-gray-800 rounded-lg shadow-sm';
+
         const memberName = entry.memberId ? (membersMap.get(entry.memberId) || 'Colaborador Desconhecido') : 'Empresa';
-        
+        const isPending = entry.status === 'pending';
+
+        let statusBadge = '';
+        let approvalButtons = '';
+        if (isPending) {
+            statusBadge = `<span class="ml-2 text-xs font-semibold bg-yellow-500 text-white px-2 py-1 rounded-full">Pendente</span>`;
+            approvalButtons = `
+                <button class="approve-button text-green-500 hover:bg-gray-200 dark:hover:bg-gray-700 p-2 rounded-full transition-colors" data-id="${entry.id}" title="Aprovar"><i class="fas fa-check-circle pointer-events-none"></i></button>
+                <button class="reject-button text-red-500 hover:bg-gray-200 dark:hover:bg-gray-700 p-2 rounded-full transition-colors" data-id="${entry.id}" title="Rejeitar"><i class="fas fa-times-circle pointer-events-none"></i></button>
+            `;
+        }
+
         entryElement.innerHTML = `
             <div>
-                <p class="font-bold">${entry.projectName}</p>
+                <p class="font-bold">${entry.projectName}${statusBadge}</p>
                 <p class="text-sm text-gray-500 dark:text-gray-400">${new Date(entry.timestamp.seconds * 1000).toLocaleDateString()} - Duração: ${formatDuration(entry.duration)} <span class="font-semibold text-blue-400">(${memberName})</span></p>
             </div>
             <div class="flex space-x-2">
-                <button class="edit-button text-blue-500 hover:text-blue-700 transition-colors" data-id="${entry.id}"><i class="fas fa-edit"></i></button>
-                <button class="delete-button text-red-500 hover:text-red-700 transition-colors" data-id="${entry.id}"><i class="fas fa-trash"></i></button>
+                ${approvalButtons}
+                <button class="edit-button text-blue-500 hover:bg-gray-200 dark:hover:bg-gray-700 p-2 rounded-full transition-colors" data-id="${entry.id}" title="Editar"><i class="fas fa-edit pointer-events-none"></i></button>
+                <button class="delete-button text-red-500 hover:bg-gray-200 dark:hover:bg-gray-700 p-2 rounded-full transition-colors" data-id="${entry.id}" title="Excluir"><i class="fas fa-trash pointer-events-none"></i></button>
             </div>
         `;
 
         // Adiciona os event listeners diretamente aos botões criados
         const editButton = entryElement.querySelector('.edit-button');
         const deleteButton = entryElement.querySelector('.delete-button');
+        const approveButton = entryElement.querySelector('.approve-button');
+        const rejectButton = entryElement.querySelector('.reject-button');
 
         editButton.addEventListener('click', () => {
             openEditModal(entry.id);
@@ -360,6 +374,20 @@ function renderTimeEntries(entries, membersMap) {
             }
         });
 
+        if (approveButton) {
+            approveButton.addEventListener('click', async () => {
+                await updateDoc(doc(db, "timeEntries", entry.id), { status: 'approved' });
+                showMessageModal("Entrada de tempo aprovada com sucesso.");
+            });
+        }
+
+        if (rejectButton) {
+            rejectButton.addEventListener('click', async () => {
+                const confirmed = await showMessageModal("Tem certeza que deseja rejeitar e excluir esta entrada de tempo?", 'confirm');
+                if (confirmed) deleteTimeEntry(entry.id);
+            });
+        }
+
         timeEntriesList.appendChild(entryElement);
     });
 }
@@ -371,6 +399,11 @@ function updateChart(data) {
     if (chartInstance) {
         chartInstance.destroy();
     }
+
+    // Define as cores com base no tema
+    const isDarkMode = document.body.classList.contains('dark');
+    const gridColor = isDarkMode ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.1)';
+    const textColor = isDarkMode ? '#E2E8F0' : '#1A202C';
 
     const ctx = document.getElementById('project-chart').getContext('2d');
     chartInstance = new Chart(ctx, {
@@ -392,11 +425,32 @@ function updateChart(data) {
                     beginAtZero: true,
                     title: {
                         display: true,
-                        text: 'Tempo Total (segundos)'
+                        text: 'Tempo Total (segundos)',
+                        color: textColor
+                    },
+                    ticks: {
+                        color: textColor
+                    },
+                    grid: {
+                        color: gridColor
+                    }
+                },
+                x: {
+                    ticks: {
+                        color: textColor
+                    },
+                    grid: {
+                        color: gridColor,
+                        drawOnChartArea: false
                     }
                 }
             },
             plugins: {
+                legend: {
+                    labels: {
+                        color: textColor
+                    }
+                },
                 tooltip: {
                     callbacks: {
                         label: function (context) {
@@ -666,6 +720,7 @@ themeToggle.addEventListener('click', () => {
     body.classList.toggle('dark');
     const currentTheme = body.classList.contains('dark') ? 'dark' : 'light';
     localStorage.setItem('theme', currentTheme);
+    updateChart(allProjects); // Re-renderiza o gráfico com as cores do novo tema
 });
 
 profileToggle.addEventListener('click', (e) => {
