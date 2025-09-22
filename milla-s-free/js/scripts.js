@@ -1,4 +1,5 @@
 import firebaseConfig from './FireBase.js';
+import { initThemeManager } from './theme-manager.js';
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
 import { getAuth, onAuthStateChanged, signOut, createUserWithEmailAndPassword, signInWithEmailAndPassword, sendPasswordResetEmail, sendEmailVerification } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 import { getFirestore, doc, getDoc, addDoc, setDoc, updateDoc, deleteDoc, onSnapshot, collection, query, where, orderBy, limit, startAfter, endBefore, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
@@ -6,14 +7,6 @@ import { setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-
 
 // Ativar logging para depuração
 setLogLevel('debug');
-
-// Aplica o tema salvo no localStorage ao carregar a página
-const savedTheme = localStorage.getItem('theme');
-if (savedTheme === 'light') {
-    document.body.classList.remove('dark');
-} else {
-    document.body.classList.add('dark'); // Garante que o padrão seja escuro
-}
 
 // Variáveis globais do Firebase
 let app, auth, db;
@@ -56,8 +49,6 @@ const cancelEditButton = document.getElementById('cancel-edit-button');
 const menuToggle = document.getElementById('menu-toggle');
 const sidebar = document.getElementById('sidebar');
 const sidebarOverlay = document.getElementById('sidebar-overlay');
-const themeToggle = document.getElementById('theme-toggle');
-const body = document.body;
 const profileToggle = document.getElementById('profile-toggle');
 const profileModal = document.getElementById('profile-modal');
 const userView = document.getElementById('user-view');
@@ -186,7 +177,10 @@ async function initializeFirebase() {
 }
 
 // Iniciar a aplicação
-document.addEventListener('DOMContentLoaded', initializeFirebase);
+document.addEventListener('DOMContentLoaded', () => {
+    initializeFirebase();
+    initThemeManager('theme-toggle', () => updateChart(allProjects));
+});
 
 function disableAppFeatures() {
     resetTimer();
@@ -714,13 +708,6 @@ sidebarOverlay.addEventListener('click', () => {
     sidebar.classList.remove('active');
     menuToggle.classList.remove('active');
     sidebarOverlay.classList.remove('active');
-});
-
-themeToggle.addEventListener('click', () => {
-    body.classList.toggle('dark');
-    const currentTheme = body.classList.contains('dark') ? 'dark' : 'light';
-    localStorage.setItem('theme', currentTheme);
-    updateChart(allProjects); // Re-renderiza o gráfico com as cores do novo tema
 });
 
 profileToggle.addEventListener('click', (e) => {

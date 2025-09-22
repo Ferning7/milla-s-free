@@ -1,18 +1,12 @@
 import firebaseConfig from './FireBase.js';
+import { initThemeManager } from './theme-manager.js';
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
 import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 import { getFirestore, collection, addDoc, query, where, onSnapshot, doc, deleteDoc, setLogLevel, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // Ativar logging para depuração
 setLogLevel('debug');
-
-// Aplica o tema salvo no localStorage ao carregar a página
-const savedTheme = localStorage.getItem('theme');
-if (savedTheme === 'dark') {
-    document.body.classList.add('dark');
-} else {
-    document.body.classList.remove('dark'); // Garante que o padrão seja claro
-}
+// O tema é aplicado por initThemeManager
 
 // Variáveis globais
 let app, auth, db;
@@ -98,12 +92,6 @@ messageOkButton.addEventListener('click', () => messageModal.classList.add('hidd
 
 addMemberButton.addEventListener('click', () => createMemberModal.classList.remove('hidden'));
 cancelCreateMemberButton.addEventListener('click', () => createMemberModal.classList.add('hidden'));
-
-themeToggle.addEventListener('click', () => {
-    document.body.classList.toggle('dark');
-    const currentTheme = document.body.classList.contains('dark') ? 'dark' : 'light';
-    localStorage.setItem('theme', currentTheme);
-});
 
 addTaskForm.addEventListener('submit', async (e) => {
     e.preventDefault();
@@ -524,4 +512,7 @@ nextMembersPageButton.addEventListener('click', () => {
 });
 
 // Iniciar a página
-document.addEventListener('DOMContentLoaded', initializeDashboard);
+document.addEventListener('DOMContentLoaded', () => {
+    initializeDashboard();
+    initThemeManager('theme-toggle');
+});

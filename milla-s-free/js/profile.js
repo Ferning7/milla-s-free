@@ -1,15 +1,10 @@
 import firebaseConfig from './FireBase.js';
+import { initThemeManager } from './theme-manager.js';
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
 import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 import { getFirestore, doc, getDoc, collection, query, where, addDoc, onSnapshot, orderBy, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-// Aplica o tema salvo no localStorage ao carregar a página
-const savedTheme = localStorage.getItem('theme');
-if (savedTheme === 'light') {
-    document.body.classList.remove('dark');
-} else {
-    document.body.classList.add('dark'); // Garante que o padrão seja escuro
-}
+// O tema é aplicado por initThemeManager
 
 // Variáveis globais
 let app, db;
@@ -26,8 +21,6 @@ let projectToStart = '';
 // Elementos da UI
 const memberNameDisplay = document.getElementById('member-name-display');
 const logoutButton = document.getElementById('logout-button');
-const themeToggle = document.getElementById('theme-toggle');
-const body = document.body;
 const timerDisplay = document.getElementById('timer-display');
 const startButton = document.getElementById('start-button');
 const stopButton = document.getElementById('stop-button');
@@ -45,13 +38,6 @@ function showMessageModal(message) {
 }
 
 messageOkButton.addEventListener('click', () => messageModal.classList.add('hidden'));
-
-themeToggle.addEventListener('click', () => {
-    body.classList.toggle('dark');
-    const currentTheme = body.classList.contains('dark') ? 'dark' : 'light';
-    localStorage.setItem('theme', currentTheme);
-    updateChart(allProjects); // Re-renderiza o gráfico com as cores do novo tema
-});
 
 // Lógica de Autenticação e Inicialização
 async function initializeProfilePage() {
@@ -302,4 +288,7 @@ stopButton.addEventListener('click', stopTimer);
 resetButton.addEventListener('click', resetTimer);
 
 // Iniciar a página
-document.addEventListener('DOMContentLoaded', initializeProfilePage);
+document.addEventListener('DOMContentLoaded', () => {
+    initializeProfilePage();
+    initThemeManager('theme-toggle', () => updateChart(allProjects));
+});
