@@ -42,6 +42,13 @@ memberLoginForm.addEventListener('submit', async (e) => {
         window.location.href = 'profile.html';
     } catch (error) {
         console.error("Erro no login do colaborador:", error);
-        showMessageModal("Token inválido ou erro de comunicação. Tente novamente.");
+        // Personaliza a mensagem de erro com base no código de erro da Cloud Function
+        if (error.code === 'functions/not-found') {
+            showMessageModal("Token de acesso inválido ou expirado. Verifique o token e tente novamente.");
+        } else if (error.code === 'functions/invalid-argument') {
+            showMessageModal("O token fornecido é inválido. Por favor, insira um token válido.");
+        } else {
+            showMessageModal("Erro de comunicação com o servidor. Tente novamente mais tarde.");
+        }
     }
 });
