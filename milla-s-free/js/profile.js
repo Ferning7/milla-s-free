@@ -71,9 +71,8 @@ async function initializeProfilePage() {
                     resetButton.disabled = true;
 
                     // Configura listeners
-                    setupTimeEntriesListener();
+                    setupDataListeners();
                     setupTasksListener(memberProfile.companyId);
-                    setupRealtimeChart();
                 } else {
                     showMessageModal("Seu perfil de colaborador não foi encontrado.");
                     await signOut(auth);
@@ -159,36 +158,31 @@ function renderTimeEntries(entries) {
 }
 
 // Listeners do Firestore (adaptados)
-function setupTimeEntriesListener() {
+function setupDataListeners() {
     if (!db || !memberProfile) return;
+
+    // Este único listener agora alimenta tanto a lista de entradas quanto o gráfico.
     const q = query(
         collection(db, "timeEntries"),
         where("memberId", "==", memberProfile.id),
         orderBy("timestamp", "desc")
     );
+
     onSnapshot(q, (snapshot) => {
         let entries = [];
-        snapshot.forEach(doc => entries.push({ id: doc.id, ...doc.data() }));
-        renderTimeEntries(entries);
-    });
-}
-
-function setupRealtimeChart() {
-    if (!db || !memberProfile) return;
-    const q = query(
-        collection(db, "timeEntries"),
-        where("memberId", "==", memberProfile.id)
-    );
-    onSnapshot(q, (snapshot) => {
         allProjects = {};
         snapshot.forEach(doc => {
-            const data = doc.data();
-            if (allProjects[data.projectName]) {
-                allProjects[data.projectName] += data.duration;
+            const entry = { id: doc.id, ...doc.data() };
+            entries.push(entry);
+
+            // Atualiza os dados do gráfico simultaneamente
+            if (allProjects[entry.projectName]) {
+                allProjects[entry.projectName] += entry.duration;
             } else {
-                allProjects[data.projectName] = data.duration;
+                allProjects[entry.projectName] = entry.duration;
             }
         });
+        renderTimeEntries(entries);
         chartInstance = updateChart(chartInstance, allProjects);
     });
 }

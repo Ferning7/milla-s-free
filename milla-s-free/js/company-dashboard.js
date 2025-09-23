@@ -67,6 +67,41 @@ async function initializeDashboard() {
     });
 }
 
+function createMemberHTML(member) {
+    // Função auxiliar para escapar HTML e prevenir XSS, caso os nomes contenham caracteres especiais.
+    const sanitize = (str) => {
+        const temp = document.createElement('div');
+        temp.textContent = str;
+        return temp.innerHTML;
+    };
+
+    return `
+        <div class="bg-white dark:bg-gray-800 p-4 rounded-lg flex justify-between items-center">
+            <div>
+                <p class="font-bold text-lg">${sanitize(member.name)}</p>
+                <p class="text-sm text-gray-400">${sanitize(member.email)}</p>
+            </div>
+            <div class="flex items-center gap-4">
+                <div class="relative">
+                    <input type="text" readonly value="${sanitize(member.loginToken)}" class="token-input bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded p-1 text-xs w-48 font-mono select-all">
+                </div>
+                <button class="copy-token-button px-3 py-1 bg-blue-500 hover:bg-blue-600 text-white rounded-lg text-sm" data-token="${sanitize(member.loginToken)}">
+                    Copiar
+                </button>
+                <button title="Editar Colaborador" class="edit-member-button text-blue-500 hover:bg-gray-200 dark:hover:bg-gray-700 p-2 rounded-full transition-colors" data-id="${member.id}" data-name="${sanitize(member.name)}" data-email="${sanitize(member.email)}">
+                    <i class="fas fa-edit"></i>
+                </button>
+                <button title="Gerar Novo Token" class="regenerate-token-button text-yellow-500 hover:bg-gray-200 dark:hover:bg-gray-700 p-2 rounded-full transition-colors" data-id="${member.id}" data-name="${sanitize(member.name || 'este colaborador')}">
+                    <i class="fas fa-sync-alt"></i>
+                </button>
+                <button title="Excluir Colaborador" class="delete-member-button text-red-500 hover:bg-gray-200 dark:hover:bg-gray-700 p-2 rounded-full transition-colors" data-id="${member.id}" data-name="${sanitize(member.name || 'este colaborador')}">
+                    <i class="fas fa-trash"></i>
+                </button>
+            </div>
+        </div>
+    `;
+}
+
 function renderMembers() {
     const searchTerm = searchMemberInput.value.toLowerCase();
     const filteredMembers = allMembers.filter(member =>
@@ -105,55 +140,7 @@ function renderMembers() {
     const startIndex = (membersCurrentPage - 1) * membersPageSize;
     const pageMembers = filteredMembers.slice(startIndex, startIndex + membersPageSize);
 
-    pageMembers.forEach(member => {
-        const memberElement = document.createElement('div');
-        memberElement.className = 'bg-white dark:bg-gray-800 p-4 rounded-lg flex justify-between items-center';
-
-        const infoDiv = document.createElement('div');
-        const nameP = document.createElement('p');
-        nameP.className = 'font-bold text-lg';
-        nameP.textContent = member.name;
-        const emailP = document.createElement('p');
-        emailP.className = 'text-sm text-gray-400';
-        emailP.textContent = member.email;
-        infoDiv.append(nameP, emailP);
-
-        const actionsDiv = document.createElement('div');
-        actionsDiv.className = 'flex items-center gap-4';
-
-        const tokenContainer = document.createElement('div');
-        tokenContainer.className = 'relative';
-        const tokenInput = document.createElement('input');
-        tokenInput.type = 'text';
-        tokenInput.readOnly = true;
-        tokenInput.value = member.loginToken;
-        tokenInput.className = 'token-input bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded p-1 text-xs w-48 font-mono select-all';
-        tokenContainer.appendChild(tokenInput);
-
-        const copyButton = document.createElement('button');
-        copyButton.className = 'copy-token-button px-3 py-1 bg-blue-500 hover:bg-blue-600 text-white rounded-lg text-sm';
-        copyButton.dataset.token = member.loginToken;
-        copyButton.textContent = 'Copiar';
-
-        const createIconButton = (title, classes, data, iconClasses) => {
-            const button = document.createElement('button');
-            button.title = title;
-            button.className = classes;
-            Object.entries(data).forEach(([key, value]) => button.dataset[key] = value);
-            const icon = document.createElement('i');
-            icon.className = iconClasses;
-            button.appendChild(icon);
-            return button;
-        };
-
-        const editButton = createIconButton('Editar Colaborador', 'edit-member-button text-blue-500 hover:bg-gray-200 dark:hover:bg-gray-700 p-2 rounded-full transition-colors', { id: member.id, name: member.name, email: member.email }, 'fas fa-edit');
-        const regenerateButton = createIconButton('Gerar Novo Token', 'regenerate-token-button text-yellow-500 hover:bg-gray-200 dark:hover:bg-gray-700 p-2 rounded-full transition-colors', { id: member.id, name: member.name || 'este colaborador' }, 'fas fa-sync-alt');
-        const deleteButton = createIconButton('Excluir Colaborador', 'delete-member-button text-red-500 hover:bg-gray-200 dark:hover:bg-gray-700 p-2 rounded-full transition-colors', { id: member.id, name: member.name || 'este colaborador' }, 'fas fa-trash');
-
-        actionsDiv.append(tokenContainer, copyButton, editButton, regenerateButton, deleteButton);
-        memberElement.append(infoDiv, actionsDiv);
-        membersList.appendChild(memberElement);
-    });
+    membersList.innerHTML = pageMembers.map(createMemberHTML).join('');
 
     membersPaginationControls.classList.toggle('hidden', filteredMembers.length <= membersPageSize);
     prevMembersPageButton.disabled = membersCurrentPage === 1;

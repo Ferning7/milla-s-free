@@ -11,7 +11,8 @@ setLogLevel('warn');
 let app, auth, db;
 let userId;
 let appId;
-let lastVisible = null;
+let pageQueryCursors = []; // Armazena o primeiro documento de cada página
+let lastDocOnPage = null; // Armazena o último documento da página atual
 const pageSize = 5;
 
 let timer;
@@ -121,7 +122,7 @@ async function initializeFirebase() {
                     registerModal.classList.add('hidden');
                     profileModal.classList.add('hidden');
 
-                    setupTimeEntriesListener();
+                    fetchTimeEntriesPage('first'); // Carrega a primeira página em vez de tudo
                     setupMembersListener();
                     setupRealtimeChart();
                     setupTasksListener();
@@ -372,20 +373,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (prevPageButton) {
         prevPageButton.addEventListener('click', () => {
-            if (currentPage > 1) {
-                currentPage--;
-                renderCurrentPage();
-            }
+            fetchTimeEntriesPage('prev');
         });
     }
 
     if (nextPageButton) {
         nextPageButton.addEventListener('click', () => {
-            const totalPages = Math.ceil(allTimeEntries.length / pageSize);
-            if (currentPage < totalPages) {
-                currentPage++;
-                renderCurrentPage();
-            }
+            fetchTimeEntriesPage('next');
         });
     }
 });
@@ -590,7 +584,7 @@ function renderCurrentPage() {
         p.className = 'text-center text-gray-500';
         p.textContent = 'Nenhuma entrada de tempo encontrada.';
         timeEntriesList.innerHTML = '';
-        timeEntriesList.appendChild(p);
+        timeEntriesList.appendChild(p); // Corrigido para adicionar o parágrafo
         paginationControls.classList.add('hidden');
         return;
     }
@@ -604,43 +598,73 @@ function renderCurrentPage() {
         currentPage = 1;
     }
 
-    const startIndex = (currentPage - 1) * pageSize;
-    const pageEntries = filteredEntries.slice(startIndex, startIndex + pageSize);
+    // Com a paginação no servidor, allTimeEntries já contém apenas os itens da página.
+    renderTimeEntries(filteredEntries, membersMap);
 
-    renderTimeEntries(pageEntries, membersMap);
-
-    paginationControls.classList.toggle('hidden', totalEntries <= pageSize);
+    // A lógica de visibilidade dos botões agora depende dos cursores.
+    paginationControls.classList.remove('hidden');
     prevPageButton.disabled = currentPage === 1;
-    nextPageButton.disabled = currentPage >= totalPages;
+    // Desabilita 'next' se a página atual tiver menos itens que o tamanho da página.
+    nextPageButton.disabled = filteredEntries.length < pageSize;
 }
 
-async function setupTimeEntriesListener() {
+async function fetchTimeEntriesPage(direction) {
     if (!db || !userId) {
         console.error("Firestore não está pronto para o listener.");
         return;
     }
-    const q = query(
-        collection(db, `timeEntries`),
+
+    let q;
+    const baseQuery = [
+        collection(db, 'timeEntries'),
         where("companyId", "==", userId),
         orderBy("timestamp", "desc")
-    );
+    ];
 
-    onSnapshot(q, (snapshot) => {
-        if (snapshot.empty) {
-            allTimeEntries = [];
-            renderCurrentPage();
+    if (direction === 'first') {
+        currentPage = 1;
+        pageQueryCursors = [null]; // O cursor da primeira página é nulo
+        q = query(...baseQuery, limit(pageSize));
+    } else if (direction === 'next' && lastDocOnPage) {
+        currentPage++;
+        pageQueryCursors[currentPage - 1] = lastDocOnPage;
+        q = query(...baseQuery, startAfter(lastDocOnPage), limit(pageSize));
+    } else if (direction === 'prev' && currentPage > 1) {
+        currentPage--;
+        const prevPageCursor = pageQueryCursors[currentPage - 1];
+        q = query(...baseQuery, startAfter(prevPageCursor), limit(pageSize));
+    } else {
+        return; // Não faz nada se não houver direção válida
+    }
+
+    try {
+        const documentSnapshots = await getDocs(q);
+
+        // Se estamos voltando e a página está vazia, pode ser um bug, então recarregamos a primeira.
+        if (documentSnapshots.empty && direction === 'prev') {
+            fetchTimeEntriesPage('first');
             return;
         }
+
+        // Atualiza os cursores para a próxima navegação
+        lastDocOnPage = documentSnapshots.docs[documentSnapshots.docs.length - 1];
+
         allTimeEntries = [];
-        snapshot.forEach(doc => {
+        documentSnapshots.forEach(doc => {
             allTimeEntries.push({ id: doc.id, ...doc.data() });
         });
 
         renderCurrentPage();
+    } catch (error) {
+        console.error("Erro ao buscar página de entradas de tempo:", error);
+        showMessageModal("Não foi possível carregar as entradas de tempo.");
+    }
+}
 
-    }, (error) => {
-        console.error("Erro no onSnapshot:", error);
-    });
+async function setupTimeEntriesListener() {
+    // Esta função foi substituída por fetchTimeEntriesPage para implementar
+    // a paginação no lado do servidor e melhorar drasticamente a performance.
+    // A carga inicial agora é feita em initializeFirebase.
 }
 
 function setupMembersListener() {
