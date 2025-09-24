@@ -3,7 +3,7 @@ import { initThemeManager } from './theme-manager.js';
 import { showMessageModal, toggleButtonLoading } from './ui-helpers.js';
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
 import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-import { getFirestore, collection, addDoc, query, where, onSnapshot, doc, deleteDoc, setLogLevel, updateDoc, orderBy } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { getFirestore, collection, query, where, onSnapshot, doc, deleteDoc, setLogLevel, updateDoc, orderBy, getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 setLogLevel('warn');
 
@@ -310,26 +310,21 @@ document.addEventListener('DOMContentLoaded', () => {
             const memberName = createMemberForm['member-name'].value;
             const memberEmail = createMemberForm['member-email'].value;
 
-            // NOTA DE SEGURANÇA: A geração de tokens no lado do cliente é adequada para protótipos,
-            // mas insegura para produção. O ideal é gerar este token em uma Cloud Function
-            // para garantir que seja único e criptograficamente seguro.
-            const loginToken = Math.random().toString(36).substring(2) + Date.now().toString(36);
-
             try {
-                await addDoc(collection(db, "members"), {
-                    name: memberName,
-                    email: memberEmail,
-                    companyId: userId,
-                    loginToken: loginToken,
-                    createdAt: new Date()
-                });
+                // Chama a Cloud Function para criar o membro e gerar o token de forma segura.
+                const functions = getFunctions(app);
+                const createMemberWithToken = httpsCallable(functions, 'createMemberToken');
+                const result = await createMemberWithToken({ name: memberName, email: memberEmail });
+
+                const newToken = result.data.token;
 
                 createMemberModal.classList.add('hidden');
                 createMemberForm.reset();
-                showMessageModal(`Colaborador adicionado! O token de acesso é: ${loginToken}. Copie e envie para o colaborador.`);
+                showMessageModal(`Colaborador adicionado! O token de acesso é: ${newToken}. Copie e envie para o colaborador.`);
             } catch (error) {
                 console.error("Erro ao adicionar colaborador:", error);
-                showMessageModal("Erro ao adicionar colaborador. Tente novamente.");
+                const errorMessage = error.message || "Erro ao adicionar colaborador. Tente novamente.";
+                showMessageModal(errorMessage);
             } finally {
                 toggleButtonLoading(submitButton, false);
             }
@@ -369,16 +364,17 @@ document.addEventListener('DOMContentLoaded', () => {
                 const memberName = button.dataset.name;
                 const confirmed = await showMessageModal(`Tem certeza que deseja gerar um novo token para "${memberName}"? O token antigo deixará de funcionar.`, 'confirm');
                 if (confirmed) {
-                    const newLoginToken = Math.random().toString(36).substring(2) + Date.now().toString(36);
-                    const memberDocRef = doc(db, "members", memberId);
-                    // NOTA DE SEGURANÇA: Assim como na criação, a regeneração de tokens deve,
-                    // idealmente, ocorrer no lado do servidor (server-side) por segurança.
                     try {
-                        await updateDoc(memberDocRef, { loginToken: newLoginToken });
-                        showMessageModal(`Novo token gerado para ${memberName}. O novo token já está visível na lista.`);
+                        // Chama a Cloud Function para regenerar o token de forma segura.
+                        const functions = getFunctions(app);
+                        const regenerateToken = httpsCallable(functions, 'regenerateMemberToken');
+                        await regenerateToken({ memberId: memberId });
+
+                        showMessageModal(`Novo token gerado para ${memberName}. A lista será atualizada em breve.`);
                     } catch (error) {
                         console.error("Erro ao gerar novo token:", error);
-                        showMessageModal("Erro ao gerar novo token. Tente novamente.");
+                        const errorMessage = error.message || "Erro ao gerar novo token. Tente novamente.";
+                        showMessageModal(errorMessage);
                     }
                 }
             }
