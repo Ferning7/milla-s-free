@@ -143,11 +143,11 @@ function renderMembers() {
     membersList.innerHTML = '';
 
     const setPlaceholder = (message) => {
-        membersList.innerHTML = `<tr><td colspan="3" class="text-center text-secondary p-4">${message}</td></tr>`;
+        membersList.innerHTML = `<tr><td colspan="3" class="text-center text-secondary p-4 text-sm">${message}</td></tr>`;
     }
 
     if (filteredMembers.length === 0) {
-        const message = searchTerm ? `Nenhum colaborador encontrado para "${searchTerm}".` : 'Nenhum colaborador cadastrado.';
+        const message = searchTerm ? `Nenhum colaborador encontrado para "${searchTerm}".` : 'Adicione seu primeiro colaborador para começar!';
         setPlaceholder(message);
         membersPaginationControls.classList.add('hidden');
         return;
@@ -299,6 +299,16 @@ document.addEventListener('DOMContentLoaded', () => {
                 } finally {
                     newTaskNameInput.value = '';
                 }
+            }
+        });
+    }
+    
+    // Adiciona funcionalidade de Enter para adicionar tarefa
+    if (newTaskNameInput) {
+        newTaskNameInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault(); // Evita quebra de linha ou outro comportamento padrão
+                addTaskForm.dispatchEvent(new Event('submit')); // Dispara o evento de submit do formulário
             }
         });
     }

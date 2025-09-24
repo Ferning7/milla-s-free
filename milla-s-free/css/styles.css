@@ -69,6 +69,14 @@ body {
     border-right: 1px solid var(--border-color);
 }
 
+.sidebar-logo {
+    height: 48px; /* Altura fixa para o logo na sidebar */
+    width: auto; /* Mantém a proporção da imagem */
+    margin-bottom: 0.5rem;
+    display: block;
+    opacity: 0.8;
+}
+
 .sidebar-header {
     font-size: 1.5rem;
     font-weight: 700;

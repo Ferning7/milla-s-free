@@ -13,7 +13,7 @@
     <div class="dashboard-container">
         <!-- Sidebar -->
         <aside class="sidebar">
-            <a href="landing.html" class="sidebar-header"><img src="../imagens/millasfull.png" alt="Milla's Free Logo" class="h-12"></a>
+            <a href="landing.html" class="sidebar-header"><img src="../imagens/millasfull.png" alt="Milla's Free Logo" class="sidebar-logo"></a>
             <nav class="sidebar-nav">
                 <ul>
                     <li><a href="index.html"><i class="fas fa-tachometer-alt"></i> <span>Painel</span></a></li>
@@ -38,8 +38,8 @@
             </header>
 
             <main>
-                <!-- Members Section -->
-                <div class="card mb-8">
+                <h1 class="text-3xl font-bold mb-6">Dashboard da Empresa</h1>
+                <div class="card mb-10">
                     <div class="flex justify-between items-center mb-4 flex-wrap gap-4">
                         <div>
                             <h2 class="text-xl font-semibold">Gerenciar Colaboradores</h2>
@@ -52,7 +52,7 @@
                                 </div>
                                 <input type="search" id="search-member-input" placeholder="Buscar colaborador..." class="w-64 p-3 pl-10">
                             </div>
-                            <button id="add-member-button" class="btn btn-primary">
+                            <button id="add-member-button" class="btn btn-success">
                                 <i class="fas fa-plus"></i> Adicionar
                             </button>
                         </div>
@@ -63,9 +63,9 @@
                         <table class="data-table">
                             <thead>
                                 <tr>
-                                    <th>Colaborador</th>
-                                    <th>Token de Acesso</th>
-                                    <th class="text-right">Ações</th>
+                                    <th class="font-bold text-gray-300">Colaborador</th>
+                                    <th class="font-bold text-gray-300">Token de Acesso</th>
+                                    <th class="text-right font-bold text-gray-300">Ações</th>
                                 </tr>
                             </thead>
                             <tbody id="members-list">
@@ -92,8 +92,8 @@
                     </div>
                 </div>
 
-                <!-- Task Management Section -->
-                <div class="card">
+                <div class="card mb-10">
+                    <!-- Task Management Section -->
                     <h2 class="text-xl font-semibold">Tarefas Pré-definidas</h2>
                     <p class="text-sm text-secondary mb-6">Crie tarefas para agilizar o apontamento da equipe.</p>
 
