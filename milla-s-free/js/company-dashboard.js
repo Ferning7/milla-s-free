@@ -2,7 +2,7 @@ import firebaseConfig from './FireBase.js';
 import { initThemeManager } from './theme-manager.js';
 import { showMessageModal, toggleButtonLoading } from './ui-helpers.js';
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 import { getFirestore, collection, addDoc, query, where, onSnapshot, doc, deleteDoc, setLogLevel, updateDoc, orderBy } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 setLogLevel('warn');
@@ -16,7 +16,8 @@ const membersPageSize = 5;
  
 let companyEmailDisplay, addMemberButton, membersList, createMemberModal, createMemberForm, cancelCreateMemberButton,
     editMemberModal, editMemberForm, cancelEditMemberButton, saveEditMemberButton, editMemberIdInput, editMemberNameInput,
-    editMemberEmailInput, themeToggle, searchMemberInput, membersPaginationControls, prevMembersPageButton, nextMembersPageButton,
+    editMemberEmailInput, searchMemberInput, membersPaginationControls, prevMembersPageButton, nextMembersPageButton,
+    profileToggle, profileModal, userView, logoutButton,
     addTaskForm, newTaskNameInput, tasksList, editTaskModal, editTaskForm, cancelEditTaskButton, saveEditTaskButton,
     editTaskIdInput, editTaskNameInput;
  
@@ -34,7 +35,10 @@ function initUIElements() {
     editMemberIdInput = document.getElementById('edit-member-id');
     editMemberNameInput = document.getElementById('edit-member-name');
     editMemberEmailInput = document.getElementById('edit-member-email');
-    themeToggle = document.getElementById('theme-toggle');
+    profileToggle = document.getElementById('profile-toggle');
+    profileModal = document.getElementById('profile-modal');
+    userView = document.getElementById('user-view');
+    logoutButton = document.getElementById('logout-button');
     searchMemberInput = document.getElementById('search-member-input');
     membersPaginationControls = document.getElementById('members-pagination-controls');
     prevMembersPageButton = document.getElementById('prev-members-page-button');
@@ -58,7 +62,10 @@ async function initializeDashboard() {
     onAuthStateChanged(auth, (user) => {
         if (user) {
             userId = user.uid;
-            companyEmailDisplay.textContent = `Logado como: ${user.email}`;
+            if (companyEmailDisplay) companyEmailDisplay.textContent = `Logado como: ${user.email}`;
+            if (userView) {
+                userView.classList.remove('hidden');
+            }
             setupMembersListener();
             setupTasksListener();
         } else {
@@ -67,8 +74,8 @@ async function initializeDashboard() {
     });
 }
 
-function createMemberHTML(member) {
-    // Função auxiliar para escapar HTML e prevenir XSS, caso os nomes contenham caracteres especiais.
+function createTaskHTML(task) {
+    // Função auxiliar para escapar HTML e prevenir XSS.
     const sanitize = (str) => {
         const temp = document.createElement('div');
         temp.textContent = str;
@@ -76,29 +83,53 @@ function createMemberHTML(member) {
     };
 
     return `
-        <div class="bg-white dark:bg-gray-800 p-4 rounded-lg flex justify-between items-center">
-            <div>
-                <p class="font-bold text-lg">${sanitize(member.name)}</p>
-                <p class="text-sm text-gray-400">${sanitize(member.email)}</p>
-            </div>
-            <div class="flex items-center gap-4">
-                <div class="relative">
-                    <input type="text" readonly value="${sanitize(member.loginToken)}" class="token-input bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded p-1 text-xs w-48 font-mono select-all">
-                </div>
-                <button class="copy-token-button px-3 py-1 bg-blue-500 hover:bg-blue-600 text-white rounded-lg text-sm" data-token="${sanitize(member.loginToken)}">
-                    Copiar
-                </button>
-                <button title="Editar Colaborador" class="edit-member-button text-blue-500 hover:bg-gray-200 dark:hover:bg-gray-700 p-2 rounded-full transition-colors" data-id="${member.id}" data-name="${sanitize(member.name)}" data-email="${sanitize(member.email)}">
+        <div class="task-item">
+            <span class="font-semibold">${sanitize(task.name)}</span>
+            <div class="flex items-center gap-2">
+                <button title="Editar Tarefa" class="edit-task-button btn-icon" data-id="${task.id}" data-name="${sanitize(task.name)}">
                     <i class="fas fa-edit"></i>
                 </button>
-                <button title="Gerar Novo Token" class="regenerate-token-button text-yellow-500 hover:bg-gray-200 dark:hover:bg-gray-700 p-2 rounded-full transition-colors" data-id="${member.id}" data-name="${sanitize(member.name || 'este colaborador')}">
-                    <i class="fas fa-sync-alt"></i>
-                </button>
-                <button title="Excluir Colaborador" class="delete-member-button text-red-500 hover:bg-gray-200 dark:hover:bg-gray-700 p-2 rounded-full transition-colors" data-id="${member.id}" data-name="${sanitize(member.name || 'este colaborador')}">
+                <button title="Excluir Tarefa" class="delete-task-button btn-icon" data-id="${task.id}" data-name="${sanitize(task.name)}">
                     <i class="fas fa-trash"></i>
                 </button>
             </div>
         </div>
+    `;
+}
+
+function createMemberHTML(member) {
+    const sanitize = (str) => {
+        const temp = document.createElement('div');
+        temp.textContent = str;
+        return temp.innerHTML;
+    };
+
+    return `
+        <tr>
+            <td>
+                <p class="font-semibold">${sanitize(member.name)}</p>
+                <p class="text-sm text-secondary">${sanitize(member.email)}</p>
+            </td>
+            <td>
+                <div class="flex items-center gap-2">
+                    <input type="text" readonly value="${sanitize(member.loginToken)}" class="token-input p-1 text-xs w-48">
+                    <button class="copy-token-button btn btn-primary btn-sm" data-token="${sanitize(member.loginToken)}">Copiar</button>
+                </div>
+            </td>
+            <td class="text-right">
+                <div class="flex items-center justify-end gap-2">
+                    <button title="Editar Colaborador" class="edit-member-button btn-icon" data-id="${member.id}" data-name="${sanitize(member.name)}" data-email="${sanitize(member.email)}">
+                        <i class="fas fa-edit"></i>
+                    </button>
+                    <button title="Gerar Novo Token" class="regenerate-token-button btn-icon" data-id="${member.id}" data-name="${sanitize(member.name || 'este colaborador')}">
+                        <i class="fas fa-sync-alt"></i>
+                    </button>
+                    <button title="Excluir Colaborador" class="delete-member-button btn-icon" data-id="${member.id}" data-name="${sanitize(member.name || 'este colaborador')}">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </div>
+            </td>
+        </tr>
     `;
 }
 
@@ -111,20 +142,13 @@ function renderMembers() {
 
     membersList.innerHTML = '';
 
-    const setPlaceholder = (element, message) => {
-        element.innerHTML = '';
-        const p = document.createElement('p');
-        p.className = 'text-center text-gray-500';
-        p.textContent = message;
-        element.appendChild(p);
-    };
+    const setPlaceholder = (message) => {
+        membersList.innerHTML = `<tr><td colspan="3" class="text-center text-secondary p-4">${message}</td></tr>`;
+    }
 
     if (filteredMembers.length === 0) {
-        if (searchTerm) {
-            setPlaceholder(membersList, `Nenhum colaborador encontrado para "${searchTerm}".`);
-        } else {
-            setPlaceholder(membersList, 'Nenhum colaborador cadastrado.');
-        }
+        const message = searchTerm ? `Nenhum colaborador encontrado para "${searchTerm}".` : 'Nenhum colaborador cadastrado.';
+        setPlaceholder(message);
         membersPaginationControls.classList.add('hidden');
         return;
     }
@@ -155,17 +179,13 @@ function setupMembersListener() {
 
     console.log(`Configurando listener para companyId: ${userId}`);
     
-    const loadingP = document.createElement('p');
-    loadingP.className = 'text-center text-gray-500';
-    loadingP.textContent = 'Carregando colaboradores...';
-    membersList.innerHTML = '';
-    membersList.appendChild(loadingP);
+    membersList.innerHTML = `<tr><td colspan="3" class="text-center text-secondary p-4">Carregando colaboradores...</td></tr>`;
 
     const q = query(collection(db, "members"), where("companyId", "==", userId));
 
     onSnapshot(q, (snapshot) => {
         console.log(`Snapshot recebido, encontrados ${snapshot.size} documentos.`);
-        allMembers = [];
+        allMembers = []; // Clear the array before repopulating
         snapshot.forEach(doc => {
             allMembers.push({ id: doc.id, ...doc.data() });
         });
@@ -173,11 +193,7 @@ function setupMembersListener() {
         renderMembers();
     }, (error) => {
         console.error("Erro ao buscar colaboradores:", error);
-        const errorP = document.createElement('p');
-        errorP.className = 'text-center text-red-500';
-        errorP.textContent = 'Erro ao carregar colaboradores. Verifique o console para mais detalhes.';
-        membersList.innerHTML = '';
-        membersList.appendChild(errorP);
+        membersList.innerHTML = `<tr><td colspan="3" class="text-center text-red-500 p-4">Erro ao carregar colaboradores.</td></tr>`;
         showMessageModal("Ocorreu um erro ao buscar os colaboradores. Verifique se as regras de segurança do Firestore permitem a leitura da coleção 'members'.");
     });
 }
@@ -189,55 +205,25 @@ function setupTasksListener() {
 
     onSnapshot(q, (snapshot) => {
         console.log(`[setupTasksListener] Snapshot recebido para tarefas. Total: ${snapshot.size} tarefas.`);
-        tasksList.innerHTML = '';
-        allTasks = [];
+        allTasks = []; // Clear the array before repopulating
+        snapshot.forEach(doc => {
+            allTasks.push({ id: doc.id, ...doc.data() });
+        });
+
         if (snapshot.empty) {
             const p = document.createElement('p');
-            p.className = 'text-center text-gray-500 text-sm';
+            p.className = 'text-center text-secondary text-sm col-span-full';
             p.textContent = 'Nenhuma tarefa pré-definida.';
             tasksList.innerHTML = '';
             tasksList.appendChild(p);
-            console.log("[setupTasksListener] Nenhuma tarefa encontrada para esta empresa.");
             return;
         }
-        snapshot.forEach(doc => {
-            const task = doc.data();
-            allTasks.push({ id: doc.id, ...task });
-            const taskElement = document.createElement('div');
-            taskElement.className = 'bg-white dark:bg-gray-800 p-3 rounded-lg flex justify-between items-center';
 
-            const taskNameSpan = document.createElement('span');
-            taskNameSpan.textContent = task.name;
-            taskElement.appendChild(taskNameSpan);
+        tasksList.innerHTML = allTasks.map(createTaskHTML).join('');
 
-            const buttonsDiv = document.createElement('div');
-            buttonsDiv.className = 'flex items-center gap-2'; 
-            const editButton = document.createElement('button');
-            editButton.title = 'Editar Tarefa';
-            editButton.className = 'edit-task-button text-blue-500 hover:bg-gray-200 dark:hover:bg-gray-700 p-2 rounded-full transition-colors';
-            editButton.dataset.id = doc.id;
-            editButton.dataset.name = task.name;
-            const editIcon = document.createElement('i');
-            editIcon.className = 'fas fa-edit';
-            editButton.appendChild(editIcon);
-
-            const deleteButton = document.createElement('button');
-            deleteButton.title = 'Excluir Tarefa';
-            deleteButton.className = 'delete-task-button text-red-500 hover:bg-gray-200 dark:hover:bg-gray-700 p-2 rounded-full transition-colors';
-            deleteButton.dataset.id = doc.id;
-            deleteButton.dataset.name = task.name;
-            const deleteIcon = document.createElement('i');
-            deleteIcon.className = 'fas fa-trash';
-            deleteButton.appendChild(deleteIcon);
-
-            buttonsDiv.append(editButton, deleteButton);
-            taskElement.appendChild(buttonsDiv);
-
-            tasksList.appendChild(taskElement);
-        });
     }, (error) => {
         console.error("Erro ao buscar tarefas:", error);
-        tasksList.innerHTML = '<p class="text-center text-red-500 text-sm">Erro ao carregar tarefas.</p>';
+        tasksList.innerHTML = '<p class="text-center text-red-500 text-sm col-span-full">Erro ao carregar tarefas.</p>';
     });
 }
 
@@ -245,6 +231,40 @@ document.addEventListener('DOMContentLoaded', () => {
     initUIElements();
     initializeDashboard();
     initThemeManager('theme-toggle');
+
+    if (profileToggle) {
+        profileToggle.addEventListener('click', (e) => {
+            const pageOverlay = document.getElementById('page-overlay');
+            e.stopPropagation();
+            if (auth.currentUser && userView) {
+                const userEmailDisplay = userView.querySelector('#user-email-display');
+                if (userEmailDisplay) userEmailDisplay.textContent = auth.currentUser.email;
+            }
+            profileModal.classList.toggle('hidden');
+            if (pageOverlay) pageOverlay.classList.toggle('hidden');
+        });
+    }
+
+    // Listener para fechar o modal de perfil ao clicar fora
+    document.addEventListener('click', (e) => {
+        const pageOverlay = document.getElementById('page-overlay');
+        if (profileModal && !profileModal.classList.contains('hidden') && !profileModal.contains(e.target) && !profileToggle.contains(e.target)) {
+            profileModal.classList.add('hidden');
+            if (pageOverlay) pageOverlay.classList.add('hidden');
+        }
+    });
+
+    if (logoutButton) {
+        logoutButton.addEventListener('click', async () => {
+            try {
+                await signOut(auth);
+                window.location.href = 'index.html';
+            } catch (error) {
+                console.error("Erro ao fazer logout:", error);
+                showMessageModal("Erro ao sair. Tente novamente.");
+            }
+        });
+    }
 
     if (addMemberButton) addMemberButton.addEventListener('click', () => createMemberModal.classList.remove('hidden'));
     if (cancelCreateMemberButton) cancelCreateMemberButton.addEventListener('click', () => createMemberModal.classList.add('hidden'));
@@ -324,14 +344,9 @@ document.addEventListener('DOMContentLoaded', () => {
             if (button.classList.contains('copy-token-button')) {
                 const token = button.dataset.token;
                 navigator.clipboard.writeText(token).then(() => {
-                    showMessageModal('Token copiado para a área de transferência!');
-                    const tokenInput = button.previousElementSibling.querySelector('.token-input');
-                    if (tokenInput) {
-                        tokenInput.classList.add('token-copied-glow');
-                        setTimeout(() => {
-                            tokenInput.classList.remove('token-copied-glow');
-                        }, 1500);
-                    }
+                    showMessageModal('Token copiado!');
+                    button.closest('tr').querySelector('.token-input')?.classList.add('token-copied-glow');
+                    setTimeout(() => button.closest('tr').querySelector('.token-input')?.classList.remove('token-copied-glow'), 1500);
                 }).catch(err => {
                     console.error('Erro ao copiar token: ', err);
                     showMessageModal('Não foi possível copiar o token.');

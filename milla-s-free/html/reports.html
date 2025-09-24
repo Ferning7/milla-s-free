@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Relatórios - Milla's Free</title>
+    <link rel="icon" href="../imagens/milasclock.png" type="image/png" sizes="any">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = { darkMode: 'class' }
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+    <link rel="stylesheet" href="../css/styles.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
+</head>
+<body class="dark">
+    <div class="dashboard-container">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <a href="landing.html" class="sidebar-header"><img src="../imagens/millasfull.png" alt="Milla's Free Logo" class="h-12"></a>
+            <nav class="sidebar-nav">
+                <ul>
+                    <li><a href="index.html"><i class="fas fa-tachometer-alt"></i> <span>Painel</span></a></li>
+                    <li><a href="company-dashboard.html"><i class="fas fa-users"></i> <span>Membros</span></a></li>
+                    <li><a href="reports.html" class="active"><i class="fas fa-chart-pie"></i> <span>Relatórios</span></a></li>
+                    <li class="sidebar-logout-item"><a href="landing.html"><i class="fas fa-sign-out-alt"></i> <span>Sair</span></a></li>
+                </ul>
+            </nav>
+        </aside>
+
+        <!-- Conteúdo Principal -->
+        <div class="main-content">
+            <header class="main-header">
+                <div class="header-actions">
+                    <button id="theme-toggle" aria-label="Alternar tema" class="theme-toggle-btn">
+                        <i class="fas fa-sun"></i>
+                    </button>
+                    <i class="fas fa-bell"></i>
+                    <a href="settings.html" title="Configurações" class="profile-pic"></a>
+                </div>
+            </header>
+
+            <main>
+                <div class="flex justify-between items-center mb-6 flex-wrap gap-4">
+                    <h1 class="text-2xl font-bold">Relatórios Avançados</h1>
+                    <div class="flex items-center gap-4">
+                        <label for="date-range-picker" class="text-sm font-medium">Período:</label>
+                        <input id="date-range-picker" class="p-2 text-sm" type="text" placeholder="Selecione o período">
+                    </div>
+                </div>
+
+                <!-- Charts Grid -->
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+                    <div class="card">
+                        <h2 class="text-xl font-semibold mb-4">Horas por Projeto</h2>
+                        <div class="h-96">
+                            <canvas id="hours-by-project-chart"></canvas>
+                        </div>
+                    </div>
+                    <div class="card">
+                        <h2 class="text-xl font-semibold mb-4">Horas por Membro da Equipe</h2>
+                        <div class="h-96 flex items-center justify-center">
+                            <canvas id="hours-by-member-chart"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Trend Chart -->
+                <div class="card">
+                    <h2 class="text-xl font-semibold mb-4">Tendência de Horas Trabalhadas (Últimos 30 dias)</h2>
+                    <div class="h-96">
+                        <canvas id="hours-trend-chart"></canvas>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+    
+    <!-- Modals (reusing from index.html for consistency) -->
+    <div id="modals-container">
+        <!-- Message Modal -->
+        <div id="message-modal" class="fixed inset-0 modal-backdrop flex items-center justify-center hidden z-50 p-4">
+            <div class="card p-6 w-full max-w-sm text-center">
+                <p id="message-text" class="text-lg font-semibold mb-4"></p>
+                <button id="message-ok" class="btn btn-primary">OK</button>
+            </div>
+        </div>
+    </div>
+
+    <script type="module" src="../js/reports.js"></script>
+</body>
+</html>

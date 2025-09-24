@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Configurações - Milla's Free</title>
+    <link rel="icon" href="../imagens/milasclock.png" type="image/png" sizes="any">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = { darkMode: 'class' }
+    </script>
+    <link rel="stylesheet" href="../css/styles.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
+</head>
+<body class="dark">
+    <div class="dashboard-container">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <a href="landing.html" class="sidebar-header"><img src="../imagens/millasfull.png" alt="Milla's Free Logo" class="h-12"></a>
+            <nav class="sidebar-nav">
+                <ul>
+                    <li><a href="index.html"><i class="fas fa-tachometer-alt"></i> <span>Painel</span></a></li>
+                    <li><a href="company-dashboard.html"><i class="fas fa-users"></i> <span>Membros</span></a></li>
+                    <li><a href="reports.html"><i class="fas fa-chart-pie"></i> <span>Relatórios</span></a></li>
+                    <li class="sidebar-logout-item"><a href="landing.html"><i class="fas fa-sign-out-alt"></i> <span>Sair</span></a></li>
+                </ul>
+            </nav>
+        </aside>
+
+        <!-- Conteúdo Principal -->
+        <div class="main-content">
+            <header class="main-header">
+                <div class="header-actions">
+                    <button id="theme-toggle" aria-label="Alternar tema" class="theme-toggle-btn">
+                        <i class="fas fa-sun"></i>
+                    </button>
+                    <i class="fas fa-bell"></i>
+                    <a href="settings.html" class="profile-pic"></a>
+                </div>
+            </header>
+
+            <main>
+                <h1 class="text-2xl font-bold mb-6">Configurações</h1>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <!-- Coluna da Esquerda -->
+                    <div class="flex flex-col gap-8">
+                        <!-- Perfil da Empresa -->
+                        <div class="card">
+                            <h2 class="text-xl font-semibold mb-4">Perfil da Empresa</h2>
+                            <form id="profile-form">
+                                <div class="mb-4">
+                                    <label for="company-name" class="block text-sm font-medium mb-1">Nome da Empresa/Gestor</label>
+                                    <input id="company-name" type="text" required class="w-full">
+                                </div>
+                                <div class="mb-6">
+                                    <label for="company-email" class="block text-sm font-medium mb-1">E-mail de Login</label>
+                                    <input id="company-email" type="email" disabled class="w-full bg-gray-100 dark:bg-gray-800 cursor-not-allowed">
+                                </div>
+                                <div class="flex justify-end">
+                                    <button type="submit" id="save-profile-button" class="btn btn-primary w-32 text-center">
+                                        <span class="button-text">Salvar</span>
+                                        <i class="fas fa-spinner fa-spin hidden button-spinner"></i>
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+
+                        <!-- Aparência -->
+                        <div class="card">
+                            <h2 class="text-xl font-semibold mb-4">Aparência</h2>
+                            <div class="flex justify-between items-center">
+                                <p class="text-secondary">Alternar entre tema claro e escuro.</p>
+                                <button id="theme-toggle-settings" aria-label="Alternar tema" class="theme-toggle-btn text-2xl">
+                                    <i class="fas fa-sun"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Coluna da Direita -->
+                    <div class="flex flex-col gap-8">
+                        <!-- Segurança da Conta -->
+                        <div class="card">
+                            <h2 class="text-xl font-semibold mb-4">Segurança da Conta</h2>
+                            <form id="password-form">
+                                <div class="mb-4">
+                                    <label for="current-password" class="block text-sm font-medium mb-1">Senha Atual</label>
+                                    <input id="current-password" type="password" required class="w-full">
+                                </div>
+                                <div class="mb-4">
+                                    <label for="new-password" class="block text-sm font-medium mb-1">Nova Senha</label>
+                                    <input id="new-password" type="password" required class="w-full">
+                                </div>
+                                <div class="mb-6">
+                                    <label for="confirm-password" class="block text-sm font-medium mb-1">Confirmar Nova Senha</label>
+                                    <input id="confirm-password" type="password" required class="w-full">
+                                </div>
+                                <div class="flex justify-end">
+                                    <button type="submit" id="change-password-button" class="btn btn-primary w-40 text-center">
+                                        <span class="button-text">Alterar Senha</span>
+                                        <i class="fas fa-spinner fa-spin hidden button-spinner"></i>
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Gerenciamento de Dados e Zona de Perigo -->
+                <div class="mt-8 grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <div class="card">
+                        <h2 class="text-xl font-semibold mb-4">Gerenciamento de Dados</h2>
+                        <p class="text-secondary mb-4">Exporte todos os seus dados para arquivos CSV.</p>
+                        <div class="flex justify-start">
+                            <button id="export-data-button" class="btn btn-secondary">
+                                <i class="fas fa-file-export mr-2"></i>
+                                Exportar Todos os Dados
+                            </button>
+                        </div>
+                    </div>
+                    <div class="card danger-zone">
+                        <h2 class="text-xl font-semibold mb-4 text-red-500">Zona de Perigo</h2>
+                        <p class="text-secondary mb-4">A exclusão da sua conta é permanente e removerá todos os seus dados, incluindo membros, tarefas e registros de tempo.</p>
+                        <div class="flex justify-start">
+                            <button id="delete-account-button" class="btn btn-danger">
+                                <i class="fas fa-exclamation-triangle mr-2"></i>
+                                Excluir Minha Conta
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+    
+    <!-- Modals (if any are needed in the future) -->
+    <div id="modals-container">
+        <!-- Message Modal -->
+        <div id="message-modal" class="fixed inset-0 modal-backdrop flex items-center justify-center hidden z-50 p-4">
+            <div class="card p-6 w-full max-w-sm text-center">
+                <p id="message-text" class="text-lg font-semibold mb-4"></p>
+                <button id="message-ok" class="btn btn-primary">OK</button>
+            </div>
+        </div>
+    </div>
+
+    <script type="module" src="../js/settings.js"></script>
+</body>
+</html>

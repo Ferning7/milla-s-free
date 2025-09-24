@@ -6,15 +6,13 @@ export class Timer {
      * @param {HTMLElement} timerDisplay - O elemento para exibir o tempo.
      * @param {HTMLButtonElement} startButton - O botão de iniciar.
      * @param {HTMLButtonElement} stopButton - O botão de parar.
-     * @param {HTMLButtonElement} resetButton - O botão de redefinir.
      * @param {HTMLInputElement} projectInput - O input que mostra a tarefa atual.
      * @param {function(string, number): Promise<void>} saveTimeEntryCallback - Callback para salvar a entrada de tempo.
      */
-    constructor(timerDisplay, startButton, stopButton, resetButton, projectInput, saveTimeEntryCallback) {
+    constructor(timerDisplay, startButton, stopButton, projectInput, saveTimeEntryCallback) {
         this.timerDisplay = timerDisplay;
         this.startButton = startButton;
         this.stopButton = stopButton;
-        this.resetButton = resetButton;
         this.projectInput = projectInput;
         this.saveTimeEntry = saveTimeEntryCallback;
 
@@ -23,8 +21,7 @@ export class Timer {
         this.timerInterval = null;
         this.projectToStart = '';
 
-        this.stopButton.addEventListener('click', () => this.stop());
-        this.resetButton.addEventListener('click', () => this.reset());
+        if (this.stopButton) this.stopButton.addEventListener('click', () => this.stop());
     }
 
     /**
@@ -50,12 +47,12 @@ export class Timer {
         this.startTime = Date.now();
         this.projectToStart = taskName;
         this.projectInput.value = taskName;
+        this.projectInput.readOnly = true;
 
         this.timerInterval = setInterval(() => this.update(), 1000);
         this.startButton.classList.add('timer-active');
         this.stopButton.disabled = false;
         this.startButton.disabled = true;
-        this.resetButton.disabled = false;
     }
 
     /**
@@ -81,7 +78,7 @@ export class Timer {
         this.startButton.classList.remove('timer-active');
         this.startButton.disabled = false;
         this.stopButton.disabled = true;
-        this.resetButton.disabled = true;
         this.projectInput.value = '';
+        this.projectInput.readOnly = false;
     }
 }

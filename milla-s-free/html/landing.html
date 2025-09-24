@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Milla's Free - Rastreamento Inteligente de Tempo para Equipes</title>
+    <link rel="icon" href="../imagens/milasclock.png" type="image/png" sizes="any">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class'
+        }
+    </script>
+    <link rel="stylesheet" href="../css/styles.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
+</head>
+
+<body class="dark">
+
+    <!-- Header -->
+    <header class="landing-header sticky top-0 z-50 text-primary">
+        <nav class="container mx-auto px-6 py-3 flex justify-between items-center relative">
+            <a href="landing.html"><img src="../imagens/millasfull.png" alt="Milla's Free Logo" class="h-12"></a>
+            <div class="hidden md:flex items-center space-x-8 absolute left-1/2 -translate-x-1/2">
+                <a href="#features" class="font-semibold">Funcionalidades</a>
+                <a href="#how-it-works" class="font-semibold">Como Funciona</a>
+            </div>
+            <div class="flex items-center space-x-4">
+                <a href="index.html" class="btn btn-primary">
+                    Acessar Painel
+                </a>
+                <button id="theme-toggle" aria-label="Alternar tema claro/escuro" class="text-xl p-2 rounded-full transition-colors">
+                    <i class="fas fa-sun"></i>
+                </button>
+            </div>
+        </nav>
+    </header>
+
+    <main>
+        <!-- Hero Section -->
+        <section class="text-center py-20 md:py-32 px-6">
+            <div class="container mx-auto">
+                <h2 class="text-4xl md:text-6xl font-extrabold mb-4 max-w-4xl mx-auto">
+                    Rastreamento de Tempo <span class="text-primary">Inteligente</span> para Equipes Eficientes.
+                </h2>
+                <p class="max-w-3xl mx-auto text-lg md:text-xl mb-8">
+                    O Milla's Free otimiza a gestão de tempo, aumenta a produtividade e promove a transparência entre gestores e colaboradores.
+                </p>
+                <div class="space-x-4">
+                    <a href="index.html" class="btn btn-primary text-lg px-8 py-3">
+                        Começar Agora
+                    </a>
+                </div>
+            </div>
+        </section>
+
+        <!-- Features Section -->
+        <section id="features" class="py-20 px-6 section-bg">
+            <div class="container mx-auto">
+                <div class="text-center mb-12">
+                    <h3 class="text-3xl md:text-4xl font-bold">Tudo que sua equipe precisa</h3>
+                    <p class="text-lg mt-2">Funcionalidades pensadas para simplificar o seu dia a dia.</p>
+                </div>
+                <div class="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
+                    <div class="card feature-card-landing animate-on-scroll">
+                        <div class="icon"><i class="fas fa-users"></i></div>
+                        <h4 class="text-xl font-bold mb-2">Gestão de Equipes</h4>
+                        <p>Adicione, edite e gerencie seus colaboradores e freelancers em um só lugar.</p>
+                    </div>
+                    <div class="card feature-card-landing animate-on-scroll">
+                        <div class="icon"><i class="fas fa-stopwatch"></i></div>
+                        <h4 class="text-xl font-bold mb-2">Time Tracker Simples</h4>
+                        <p>Um cronômetro intuitivo para rastrear o tempo gasto em cada tarefa, sem complicação.</p>
+                    </div>
+                    <div class="card feature-card-landing animate-on-scroll">
+                        <div class="icon"><i class="fas fa-check-double"></i></div>
+                        <h4 class="text-xl font-bold mb-2">Aprovação de Horas</h4>
+                        <p>Gestores podem aprovar ou rejeitar as horas submetidas pelos colaboradores com facilidade.</p>
+                    </div>
+                    <div class="card feature-card-landing animate-on-scroll">
+                        <div class="icon"><i class="fas fa-chart-pie"></i></div>
+                        <h4 class="text-xl font-bold mb-2">Relatórios Visuais</h4>
+                        <p>Gráficos em tempo real mostram a distribuição do tempo por projeto, ajudando na tomada de decisão.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- How It Works Section -->
+        <section id="how-it-works" class="py-20 px-6">
+            <div class="container mx-auto">
+                <div class="text-center mb-12">
+                    <h3 class="text-3xl md:text-4xl font-bold">Comece em 3 Passos Simples</h3>
+                </div>
+                <div class="max-w-3xl mx-auto grid md:grid-cols-1 gap-8">
+                    <div class="card step-card animate-on-scroll">
+                        <h4 class="text-xl font-bold mb-2"><span class="text-primary">1. Gestor:</span> Cadastre-se e Configure</h4>
+                        <p>Crie sua conta de empresa, adicione os membros da sua equipe e defina as tarefas mais comuns para agilizar o trabalho.</p>
+                    </div>
+                    <div class="card step-card animate-on-scroll">
+                        <h4 class="text-xl font-bold mb-2"><span class="text-primary">2. Colaborador:</span> Acesse e Rastreie</h4>
+                        <p>Com o token de acesso fornecido pelo gestor, o colaborador faz login e começa a registrar o tempo em suas tarefas com um clique.</p>
+                    </div>
+                    <div class="card step-card animate-on-scroll">
+                        <h4 class="text-xl font-bold mb-2"><span class="text-primary">3. Análise:</span> Visualize e Otimize</h4>
+                        <p>Acompanhe o tempo investido em cada projeto através de relatórios e gráficos, aprove horas e otimize a alocação de recursos.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Benefits Section -->
+        <section id="benefits" class="py-20 px-6 section-bg">
+            <div class="container mx-auto">
+                <div class="text-center mb-12">
+                    <h3 class="text-3xl md:text-4xl font-bold">Benefícios da Nossa Solução</h3>
+                    <p class="text-lg mt-2">Veja como o Milla's Free pode transformar sua gestão.</p>
+                </div>
+                <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-6xl mx-auto">
+                    <div class="card feature-card-landing animate-on-scroll">
+                        <div class="icon"><i class="fas fa-handshake"></i></div>
+                        <h4 class="text-xl font-bold mb-2">Redução de Conflitos</h4>
+                        <p>Clareza total sobre o tempo investido em cada etapa do projeto, eliminando disputas e promovendo confiança.</p>
+                    </div>
+                    <div class="card feature-card-landing animate-on-scroll">
+                        <div class="icon"><i class="fas fa-chart-line"></i></div>
+                        <h4 class="text-xl font-bold mb-2">Aumento da Produtividade</h4>
+                        <p>Identifique gargalos e otimize recursos, garantindo entregas mais rápidas e eficientes.</p>
+                    </div>
+                    <div class="card feature-card-landing animate-on-scroll">
+                        <div class="icon"><i class="fas fa-eye"></i></div>
+                        <h4 class="text-xl font-bold mb-2">Transparência nas Entregas</h4>
+                        <p>Facilite a comunicação entre freelancers e gestores com acompanhamento claro em tempo real.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Footer -->
+    <footer class="section-bg py-8 px-6">
+        <div class="container mx-auto text-center">
+            <p>&copy; 2025 Milla's Free. Todos os direitos reservados.</p>
+            <p class="text-sm mt-2">Desenvolvido como projeto de TCC no SENAI-CTTI em parceria com 3AQ Tecnologia.</p>
+        </div>
+    </footer>
+
+    <script type="module">
+        import { initThemeManager } from '../js/theme-manager.js';
+        import { initScrollAnimations } from '../js/animations.js';
+
+        document.addEventListener('DOMContentLoaded', () => {
+            // Inicializa o gerenciador de tema para o botão na landing page
+            initThemeManager('theme-toggle');
+            // Inicializa animações de scroll para os cards
+            initScrollAnimations('.animate-on-scroll');
+        });
+    </script>
+
+</body>
+
+</html>

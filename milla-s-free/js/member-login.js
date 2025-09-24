@@ -1,11 +1,11 @@
 import firebaseConfig from './FireBase.js';
-import { applyTheme } from './theme-manager.js';
+import { applyInitialTheme } from './theme-manager.js';
 import { showMessageModal } from './ui-helpers.js';
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
 import { getAuth, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-functions.js";
 
-applyTheme();
+applyInitialTheme();
 
 // Inicialização do Firebase
 const app = initializeApp(firebaseConfig);

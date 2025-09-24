@@ -18,18 +18,16 @@ const pageSize = 5;
 let timer;
 let currentPage = 1;
 let allTasks = [];
-let chartInstance = null;
 let allProjects = {}; 
-let allTimeEntries = [];
 let selectedMemberId = 'all';
 let membersMap = new Map();
 
-let timerDisplay, startButton, stopButton, resetButton, projectInput, timeEntriesList,
+let timerDisplay, startButton, stopButton, projectInput, timeEntriesTbody, statTotalHours, statActiveProjects, statTeamMembers, statPendingEntries,
     prevPageButton, nextPageButton, paginationControls, editModal, editEntryIdInput,
     editProjectInput, editDateInput, editHoursInput, editMinutesInput, editSecondsInput,
-    saveEditButton, cancelEditButton, menuToggle, sidebar, sidebarOverlay, profileToggle,
+    saveEditButton, cancelEditButton, profileToggle,
     profileModal, userView, guestView, userEmailDisplay, logoutButton, shareToggle,
-    shareModal, appIdDisplay, copyAppIdButton, closeShareModalButton, showLoginModalButton,
+    shareModal, appIdDisplay, copyAppIdButton, closeShareModalButton, showLoginModalButton, menuToggleMain,
     showRegisterModalButton, loginModal, loginForm, loginEmailInput, loginPasswordInput,
     cancelLoginButton, registerModal, registerForm, cancelRegisterButton, messageModal,
     messageText, messageOkButton, messageCancelButton, forgotPasswordLink,
@@ -41,9 +39,12 @@ function initUIElements() {
     timerDisplay = document.getElementById('timer-display');
     startButton = document.getElementById('start-button');
     stopButton = document.getElementById('stop-button');
-    resetButton = document.getElementById('reset-button');
     projectInput = document.getElementById('project-input');
-    timeEntriesList = document.getElementById('time-entries-list');
+    timeEntriesTbody = document.getElementById('time-entries-tbody');
+    statTotalHours = document.getElementById('stat-total-hours');
+    statActiveProjects = document.getElementById('stat-active-projects');
+    statTeamMembers = document.getElementById('stat-team-members');
+    statPendingEntries = document.getElementById('stat-pending-entries');
     prevPageButton = document.getElementById('prev-page-button');
     nextPageButton = document.getElementById('next-page-button');
     paginationControls = document.getElementById('pagination-controls');
@@ -56,9 +57,6 @@ function initUIElements() {
     editSecondsInput = document.getElementById('edit-seconds');
     saveEditButton = document.getElementById('save-edit-button');
     cancelEditButton = document.getElementById('cancel-edit-button');
-    menuToggle = document.getElementById('menu-toggle');
-    sidebar = document.getElementById('sidebar');
-    sidebarOverlay = document.getElementById('sidebar-overlay');
     profileToggle = document.getElementById('profile-toggle');
     profileModal = document.getElementById('profile-modal');
     userView = document.getElementById('user-view');
@@ -131,7 +129,7 @@ async function initializeFirebase() {
                         document.getElementById('timer-display'),
                         document.getElementById('start-button'),
                         document.getElementById('stop-button'),
-                        document.getElementById('reset-button'),
+                        document.getElementById('project-input'),
                         document.getElementById('project-input'),
                         saveTimeEntry);
                 } else {
@@ -158,7 +156,7 @@ async function initializeFirebase() {
 document.addEventListener('DOMContentLoaded', () => {
     initUIElements();
     initializeFirebase();
-    initThemeManager('theme-toggle', () => chartInstance = updateChart(chartInstance, allProjects));
+    initThemeManager('theme-toggle');
 
     if (userView) {
         userView.addEventListener('click', async (e) => {
@@ -174,12 +172,12 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    if (startButton) startButton.addEventListener('click', openTaskSelectionModal);
+    if (startButton) startButton.addEventListener('click', handleStartTimer);
     if (saveEditButton) saveEditButton.addEventListener('click', saveEditedEntry);
     if (cancelEditButton) cancelEditButton.addEventListener('click', () => editModal.classList.add('hidden'));
 
-    if (timeEntriesList) {
-        timeEntriesList.addEventListener('click', async (e) => {
+    if (timeEntriesTbody) {
+        timeEntriesTbody.addEventListener('click', async (e) => {
             const button = e.target.closest('button');
             if (!button) return;
 
@@ -205,64 +203,32 @@ document.addEventListener('DOMContentLoaded', () => {
     if (memberFilter) {
         memberFilter.addEventListener('change', () => {
             selectedMemberId = memberFilter.value;
-            currentPage = 1;
-            renderCurrentPage();
+            fetchTimeEntriesPage('first');
         });
     }
 
-    if (cancelTaskSelectionButton) {
-        cancelTaskSelectionButton.addEventListener('click', () => {
-            taskSelectionModal.classList.add('hidden');
-        });
-    }
-
-    if (existingTasksList) {
-        existingTasksList.addEventListener('click', (e) => {
-            if (e.target && e.target.dataset.taskName) {
-                newTaskInput.value = e.target.dataset.taskName;
-            }
-        });
-    }
-
-    if (startTimerConfirmButton) {
-        startTimerConfirmButton.addEventListener('click', () => {
-            const selectedTask = newTaskInput.value.trim();
-            if (selectedTask === "") {
-                showMessageModal("Por favor, selecione ou digite uma tarefa.");
-                return;
-            }
-            taskSelectionModal.classList.add('hidden');
-            timer.start(selectedTask);
-        });
-    }
-
-    if (menuToggle) {
-        menuToggle.addEventListener('click', () => {
-            sidebar.classList.toggle('active');
-            menuToggle.classList.toggle('active');
-            sidebarOverlay.classList.toggle('active');
-        });
-    }
-
-    if (sidebarOverlay) {
-        sidebarOverlay.addEventListener('click', () => {
-            sidebar.classList.remove('active');
-            menuToggle.classList.remove('active');
-            sidebarOverlay.classList.remove('active');
+    const statusFilter = document.getElementById('status-filter');
+    if (statusFilter) {
+        statusFilter.addEventListener('change', () => {
+            fetchTimeEntriesPage('first');
         });
     }
 
     if (profileToggle) {
         profileToggle.addEventListener('click', (e) => {
+            const pageOverlay = document.getElementById('page-overlay');
             e.stopPropagation();
             profileModal.classList.toggle('hidden');
+            if (pageOverlay) pageOverlay.classList.toggle('hidden');
         });
     }
 
     // Listener global no documento para fechar o modal de perfil
     document.addEventListener('click', (e) => {
+        const pageOverlay = document.getElementById('page-overlay');
         if (profileModal && !profileModal.contains(e.target) && profileToggle && !profileToggle.contains(e.target)) {
             profileModal.classList.add('hidden');
+            if (pageOverlay) pageOverlay.classList.add('hidden');
         }
     });
 
@@ -350,6 +316,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
             try {
                 const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+                
+                // Cria um perfil de empresa inicial para o novo usuário.
+                const companyDocRef = doc(db, "companies", userCredential.user.uid);
+                await setDoc(companyDocRef, { name: email, email: email });
+
                 await sendEmailVerification(userCredential.user);
                 registerForm.reset();
                 showMessageModal("Cadastro realizado com sucesso! Um e-mail de verificação foi enviado para sua caixa de entrada.");
@@ -389,17 +360,7 @@ function disableAppFeatures() {
     projectInput.disabled = true;
     startButton.disabled = true;
     stopButton.disabled = true;
-    resetButton.disabled = true;
-    timeEntriesList.innerHTML = '<p class="text-center text-gray-500">Faça login para ver suas entradas de tempo.</p>';
-    const placeholder = document.createElement('p');
-    placeholder.className = 'text-center text-gray-500';
-    placeholder.textContent = 'Faça login para ver suas entradas de tempo.';
-    timeEntriesList.innerHTML = '';
-    timeEntriesList.appendChild(placeholder);
-    if (chartInstance) {
-        chartInstance.destroy();
-        chartInstance = null;
-    }
+    timeEntriesTbody.innerHTML = `<tr><td colspan="6" class="text-center p-4 text-secondary">Faça login para ver suas entradas de tempo.</td></tr>`;
     paginationControls.classList.add('hidden');
 }
 
@@ -432,33 +393,17 @@ function updateVerificationStatus(user) {
     }
 }
 
-async function openTaskSelectionModal() {
+function handleStartTimer() {
     if (timer && timer.isRunning) {
         showMessageModal("O rastreador já está em andamento.");
         return;
     }
-    populateTaskSelectionModal(allTasks);
-    taskSelectionModal.classList.remove('hidden');
-}
-
-function populateTaskSelectionModal(tasks) {
-    existingTasksList.innerHTML = '';
-    newTaskInput.value = '';
-    if (tasks.length === 0) {
-        const p = document.createElement('p');
-        p.className = 'p-3 text-center text-sm text-gray-500';
-        p.textContent = 'Nenhuma tarefa pré-definida.';
-        existingTasksList.innerHTML = '';
-        existingTasksList.appendChild(p);
-    } else {
-        tasks.forEach(task => {
-            const taskElement = document.createElement('div');
-            taskElement.className = 'p-3 text-left cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md';
-            taskElement.textContent = task.name;
-            taskElement.dataset.taskName = task.name;
-            existingTasksList.appendChild(taskElement);
-        });
+    const taskName = projectInput.value.trim();
+    if (!taskName) {
+        showMessageModal("Por favor, digite o nome da tarefa para iniciar.");
+        return;
     }
+    timer.start(taskName);
 }
 
 async function saveTimeEntry(projectName, duration) {
@@ -483,68 +428,98 @@ async function saveTimeEntry(projectName, duration) {
     }
 }
 
-function renderTimeEntries(entries, membersMap) {
-    timeEntriesList.innerHTML = '';
+function renderTimeEntries(entries) {
+    timeEntriesTbody.innerHTML = '';
+    if (entries.length === 0) {
+        timeEntriesTbody.innerHTML = `<tr><td colspan="6" class="text-center p-4 text-secondary">Nenhuma entrada de tempo encontrada.</td></tr>`;
+        return;
+    }
     entries.forEach(entry => {
-        const entryElement = document.createElement('div');
-        entryElement.className = 'flex items-center justify-between p-4 bg-white dark:bg-gray-800 rounded-lg shadow-sm';
-
         const memberName = entry.memberId ? (membersMap.get(entry.memberId) || 'Colaborador Desconhecido') : 'Empresa';
         const isPending = entry.status === 'pending';
-
-        const infoDiv = document.createElement('div');
-        const projectP = document.createElement('p');
-        projectP.className = 'font-bold';
-        projectP.textContent = entry.projectName;
-
-        if (isPending) {
-            const statusBadge = document.createElement('span');
-            statusBadge.className = 'ml-2 text-xs font-semibold bg-yellow-500 text-white px-2 py-1 rounded-full';
-            statusBadge.textContent = 'Pendente';
-            projectP.appendChild(statusBadge);
-        }
-
-        const detailsP = document.createElement('p');
-        detailsP.className = 'text-sm text-gray-500 dark:text-gray-400';
-        detailsP.textContent = `${new Date(entry.timestamp.seconds * 1000).toLocaleDateString()} - Duração: ${formatDuration(entry.duration)} `;
-
-        const memberSpan = document.createElement('span');
-        memberSpan.className = 'font-semibold text-blue-400';
-        memberSpan.textContent = `(${memberName})`;
-        detailsP.appendChild(memberSpan);
-
-        infoDiv.append(projectP, detailsP);
-
-        const buttonsDiv = document.createElement('div');
-        buttonsDiv.className = 'flex space-x-2';
-
-        let approveButton, rejectButton;
-
-        const createIconButton = (title, classes, iconClasses) => {
-            const button = document.createElement('button');
-            button.className = classes;
-            button.dataset.id = entry.id;
-            button.title = title;
-            const icon = document.createElement('i');
-            icon.className = iconClasses + ' pointer-events-none';
-            button.appendChild(icon);
-            return button;
+        const statusInfo = {
+            approved: { text: 'Aprovado', class: 'status-approved' },
+            pending: { text: 'Pendente', class: 'status-pending' },
+            rejected: { text: 'Rejeitado', class: 'status-rejected' }
         };
+        const currentStatus = statusInfo[entry.status] || { text: entry.status, class: '' };
 
-        if (isPending) {
-            approveButton = createIconButton('Aprovar', 'approve-button text-green-500 hover:bg-gray-200 dark:hover:bg-gray-700 p-2 rounded-full transition-colors', 'fas fa-check-circle');
-            rejectButton = createIconButton('Rejeitar', 'reject-button text-red-500 hover:bg-gray-200 dark:hover:bg-gray-700 p-2 rounded-full transition-colors', 'fas fa-times-circle');
-            buttonsDiv.append(approveButton, rejectButton);
-        }
-
-        const editButton = createIconButton('Editar', 'edit-button text-blue-500 hover:bg-gray-200 dark:hover:bg-gray-700 p-2 rounded-full transition-colors', 'fas fa-edit');
-        const deleteButton = createIconButton('Excluir', 'delete-button text-red-500 hover:bg-gray-200 dark:hover:bg-gray-700 p-2 rounded-full transition-colors', 'fas fa-trash');
-
-        buttonsDiv.append(editButton, deleteButton);
-        entryElement.append(infoDiv, buttonsDiv);
-
-        timeEntriesList.appendChild(entryElement);
+        const row = document.createElement('tr');
+        row.innerHTML = `
+            <td>${entry.projectName}</td>
+            <td>${memberName}</td>
+            <td>${new Date(entry.timestamp.seconds * 1000).toLocaleDateString()}</td>
+            <td>${formatDuration(entry.duration)}</td>
+            <td><span class="status-badge ${currentStatus.class}">${currentStatus.text}</span></td>
+            <td class="text-right">
+                <div class="flex items-center justify-end gap-2">
+                    ${isPending ? `
+                        <button title="Aprovar" class="approve-button btn-icon" data-id="${entry.id}"><i class="fas fa-check-circle text-green-500"></i></button>
+                        <button title="Rejeitar" class="reject-button btn-icon" data-id="${entry.id}"><i class="fas fa-times-circle text-red-500"></i></button>
+                    ` : ''}
+                    <button title="Editar" class="edit-button btn-icon" data-id="${entry.id}"><i class="fas fa-edit"></i></button>
+                    <button title="Excluir" class="delete-button btn-icon" data-id="${entry.id}"><i class="fas fa-trash"></i></button>
+                </div>
+            </td>
+        `;
+        timeEntriesTbody.appendChild(row);
     });
+}
+
+function renderCurrentPage(entries) {
+    renderTimeEntries(entries);
+    paginationControls.classList.remove('hidden');
+    prevPageButton.disabled = currentPage === 1;
+    nextPageButton.disabled = entries.length < pageSize;
+}
+
+async function fetchTimeEntriesPage(direction) {
+    if (!db || !userId) return;
+
+    let q;
+    let baseQuery = [
+        collection(db, 'timeEntries'),
+        where("companyId", "==", userId),
+        orderBy("timestamp", "desc")
+    ];
+
+    const statusFilterValue = document.getElementById('status-filter')?.value;
+    if (statusFilterValue && statusFilterValue !== 'all') {
+        baseQuery.push(where("status", "==", statusFilterValue));
+    }
+
+    // Adiciona filtro de membro se não for 'all'
+    if (selectedMemberId !== 'all') {
+        const memberFilterField = selectedMemberId === 'company' ? 'memberId' : 'memberId';
+        const memberFilterValue = selectedMemberId === 'company' ? null : selectedMemberId;
+        baseQuery.push(where(memberFilterField, "==", memberFilterValue));
+    }
+
+    if (direction === 'first') {
+        currentPage = 1;
+        pageQueryCursors = [null];
+        q = query(...baseQuery, limit(pageSize));
+    } else if (direction === 'next' && lastDocOnPage) {
+        currentPage++;
+        pageQueryCursors[currentPage - 1] = lastDocOnPage;
+        q = query(...baseQuery, startAfter(lastDocOnPage), limit(pageSize));
+    } else if (direction === 'prev' && currentPage > 1) {
+        currentPage--;
+        const prevPageCursor = pageQueryCursors[currentPage - 1];
+        q = query(...baseQuery, startAfter(prevPageCursor), limit(pageSize));
+    } else {
+        return;
+    }
+
+    try {
+        const documentSnapshots = await getDocs(q);
+        lastDocOnPage = documentSnapshots.docs[documentSnapshots.docs.length - 1];
+        const entries = documentSnapshots.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        renderCurrentPage(entries);
+    } catch (error) {
+        console.error("Erro ao buscar entradas de tempo:", error);
+        showMessageModal("Não foi possível carregar as entradas de tempo.");
+    }
 }
 
 function populateMemberFilter(membersMap) {
@@ -570,97 +545,6 @@ function populateMemberFilter(membersMap) {
     memberFilter.value = currentFilterValue;
 }
 
-function renderCurrentPage() {
-    let filteredEntries = allTimeEntries;
-    if (selectedMemberId === 'company') {
-        filteredEntries = allTimeEntries.filter(entry => entry.memberId === null);
-    } else if (selectedMemberId !== 'all') {
-        filteredEntries = allTimeEntries.filter(entry => entry.memberId === selectedMemberId);
-    }
-
-    const totalEntries = filteredEntries.length;
-    if (totalEntries === 0) {
-        const p = document.createElement('p');
-        p.className = 'text-center text-gray-500';
-        p.textContent = 'Nenhuma entrada de tempo encontrada.';
-        timeEntriesList.innerHTML = '';
-        timeEntriesList.appendChild(p); // Corrigido para adicionar o parágrafo
-        paginationControls.classList.add('hidden');
-        return;
-    }
-    
-    const totalPages = Math.ceil(totalEntries / pageSize);
-
-    if (currentPage > totalPages) {
-        currentPage = totalPages;
-    }
-    if (currentPage < 1) {
-        currentPage = 1;
-    }
-
-    // Com a paginação no servidor, allTimeEntries já contém apenas os itens da página.
-    renderTimeEntries(filteredEntries, membersMap);
-
-    // A lógica de visibilidade dos botões agora depende dos cursores.
-    paginationControls.classList.remove('hidden');
-    prevPageButton.disabled = currentPage === 1;
-    // Desabilita 'next' se a página atual tiver menos itens que o tamanho da página.
-    nextPageButton.disabled = filteredEntries.length < pageSize;
-}
-
-async function fetchTimeEntriesPage(direction) {
-    if (!db || !userId) {
-        console.error("Firestore não está pronto para o listener.");
-        return;
-    }
-
-    let q;
-    const baseQuery = [
-        collection(db, 'timeEntries'),
-        where("companyId", "==", userId),
-        orderBy("timestamp", "desc")
-    ];
-
-    if (direction === 'first') {
-        currentPage = 1;
-        pageQueryCursors = [null]; // O cursor da primeira página é nulo
-        q = query(...baseQuery, limit(pageSize));
-    } else if (direction === 'next' && lastDocOnPage) {
-        currentPage++;
-        pageQueryCursors[currentPage - 1] = lastDocOnPage;
-        q = query(...baseQuery, startAfter(lastDocOnPage), limit(pageSize));
-    } else if (direction === 'prev' && currentPage > 1) {
-        currentPage--;
-        const prevPageCursor = pageQueryCursors[currentPage - 1];
-        q = query(...baseQuery, startAfter(prevPageCursor), limit(pageSize));
-    } else {
-        return; // Não faz nada se não houver direção válida
-    }
-
-    try {
-        const documentSnapshots = await getDocs(q);
-
-        // Se estamos voltando e a página está vazia, pode ser um bug, então recarregamos a primeira.
-        if (documentSnapshots.empty && direction === 'prev') {
-            fetchTimeEntriesPage('first');
-            return;
-        }
-
-        // Atualiza os cursores para a próxima navegação
-        lastDocOnPage = documentSnapshots.docs[documentSnapshots.docs.length - 1];
-
-        allTimeEntries = [];
-        documentSnapshots.forEach(doc => {
-            allTimeEntries.push({ id: doc.id, ...doc.data() });
-        });
-
-        renderCurrentPage();
-    } catch (error) {
-        console.error("Erro ao buscar página de entradas de tempo:", error);
-        showMessageModal("Não foi possível carregar as entradas de tempo.");
-    }
-}
-
 async function setupTimeEntriesListener() {
     // Esta função foi substituída por fetchTimeEntriesPage para implementar
     // a paginação no lado do servidor e melhorar drasticamente a performance.
@@ -676,11 +560,14 @@ function setupMembersListener() {
         snapshot.forEach(doc => {
             membersMap.set(doc.id, doc.data().name);
         });
+        if (statTeamMembers) {
+            statTeamMembers.textContent = snapshot.size;
+        }
         populateMemberFilter(membersMap);
         memberFilter.value = currentFilterValue;
 
         // Re-render a página atual, pois os nomes dos membros podem ter mudado
-        renderCurrentPage();
+        fetchTimeEntriesPage('first');
     });
 }
 
@@ -696,6 +583,11 @@ async function setupRealtimeChart() {
 
     onSnapshot(q, (snapshot) => {
         allProjects = {};
+        const now = new Date();
+        const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+        let totalHoursMonth = 0;
+        let pendingCount = 0;
+        const projectsInMonth = new Set();
         snapshot.forEach(doc => {
             const data = doc.data();
             const projectName = data.projectName;
@@ -706,8 +598,22 @@ async function setupRealtimeChart() {
             } else {
                 allProjects[projectName] = duration;
             }
+
+            // Aggregate for stats
+            if (data.status === 'pending') {
+                pendingCount++;
+            }
+            const entryDate = new Date(data.timestamp.seconds * 1000);
+            if (entryDate >= startOfMonth) {
+                totalHoursMonth += duration;
+                projectsInMonth.add(projectName);
+            }
         });
-        chartInstance = updateChart(chartInstance, allProjects);
+
+        if (statTotalHours) statTotalHours.textContent = formatDuration(totalHoursMonth);
+        if (statActiveProjects) statActiveProjects.textContent = projectsInMonth.size;
+        if (statPendingEntries) statPendingEntries.textContent = pendingCount;
+
     }, (error) => {
         console.error("Erro no onSnapshot para o gráfico:", error);
     });
@@ -718,9 +624,17 @@ async function setupTasksListener() {
 
     const q = query(collection(db, "tasks"), where("companyId", "==", userId), orderBy("name"));
     onSnapshot(q, (snapshot) => {
+        const tasksDatalist = document.getElementById('tasks-datalist');
         allTasks = [];
+        if (tasksDatalist) tasksDatalist.innerHTML = '';
         snapshot.forEach(doc => {
-            allTasks.push({ id: doc.id, ...doc.data() });
+            const task = { id: doc.id, ...doc.data() };
+            allTasks.push(task);
+            if (tasksDatalist) {
+                const option = document.createElement('option');
+                option.value = task.name;
+                tasksDatalist.appendChild(option);
+            }
         });
     });
 }
