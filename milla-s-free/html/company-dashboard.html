@@ -52,9 +52,11 @@
                             <p id="company-email-display" class="text-sm text-secondary"></p>
                         </div>
                         <div class="flex items-center gap-4">
-                            <div class="search-bar">
-                                <i class="fas fa-search"></i>
-                                <input type="search" id="search-member-input" placeholder="Buscar colaborador..." class="w-64">
+                            <div class="relative">
+                                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                    <i class="fas fa-search text-gray-500 dark:text-gray-400"></i>
+                                </div>
+                                <input type="search" id="search-member-input" placeholder="Buscar colaborador..." class="w-64 p-3 pl-10">
                             </div>
                             <button id="add-member-button" class="btn btn-primary">
                                 <i class="fas fa-plus"></i> Adicionar

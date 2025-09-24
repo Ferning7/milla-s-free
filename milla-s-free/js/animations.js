@@ -17,11 +17,12 @@ export function initScrollAnimations(selector) {
 
     const observer = new IntersectionObserver((entries, observer) => {
         entries.forEach(entry => {
-            // Se o elemento está na viewport e ainda não está visível
-            if (entry.isIntersecting && !entry.target.classList.contains('visible')) {
+            // Adiciona a classe 'visible' quando o elemento entra na tela
+            if (entry.isIntersecting) {
                 entry.target.classList.add('visible');
-                // Opcional: para de observar o elemento depois que a animação foi acionada
-                observer.unobserve(entry.target);
+            } else {
+                // Remove a classe quando o elemento sai da tela, permitindo que a animação ocorra novamente
+                entry.target.classList.remove('visible');
             }
         });
     }, {
