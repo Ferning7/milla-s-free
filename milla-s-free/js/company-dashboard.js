@@ -173,13 +173,20 @@ function renderMembers() {
 
 function setupMembersListener() {
     if (!db || !userId) {
-        console.error("DB ou UserID não disponível para setupMembersListener.");
         return;
     }
 
-    console.log(`Configurando listener para companyId: ${userId}`);
-    
-    membersList.innerHTML = `<tr><td colspan="3" class="text-center text-secondary p-4">Carregando colaboradores...</td></tr>`;
+    // Show skeleton
+    const skeletonHTML = Array(membersPageSize).fill(`
+        <tr class="skeleton-row">
+            <td colspan="3">
+                <div class="flex items-center justify-between p-2">
+                    <div class="space-y-2"><div class="skeleton skeleton-text w-32"></div><div class="skeleton skeleton-text-sm w-48"></div></div>
+                    <div class="skeleton skeleton-text w-24 h-8"></div>
+                </div>
+            </td>
+        </tr>`).join('');
+    membersList.innerHTML = skeletonHTML;
 
     const q = query(collection(db, "members"), where("companyId", "==", userId));
 
@@ -193,7 +200,7 @@ function setupMembersListener() {
         renderMembers();
     }, (error) => {
         console.error("Erro ao buscar colaboradores:", error);
-        membersList.innerHTML = `<tr><td colspan="3" class="text-center text-red-500 p-4">Erro ao carregar colaboradores.</td></tr>`;
+        membersList.innerHTML = `<tr><td colspan="3" class="text-center text-red-500 p-4">Erro ao carregar colaboradores.</td></tr>`; // Hide skeleton on error
         showMessageModal("Ocorreu um erro ao buscar os colaboradores. Verifique se as regras de segurança do Firestore permitem a leitura da coleção 'members'.");
     });
 }
