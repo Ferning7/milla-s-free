@@ -57,6 +57,33 @@
             </div>
         </section>
 
+        <!-- Gain/Loss Calculator Section -->
+        <section id="calculator" class="py-20 px-6 section-bg">
+            <div class="container mx-auto text-center">
+                <h3 class="text-3xl md:text-4xl font-bold animate-on-scroll">Quanto tempo (e dinheiro) sua equipe está perdendo?</h3>
+                <p class="text-lg mt-2 mb-8 animate-on-scroll delay-1 text-secondary">Calcule o custo invisível da falta de gerenciamento de tempo.</p>
+                <div class="card max-w-3xl mx-auto p-8 animate-on-scroll delay-2">
+                    <div class="grid md:grid-cols-2 gap-8 items-center">
+                        <div class="space-y-6">
+                            <div class="text-left">
+                                <label for="hourly-rate" class="block text-sm font-medium mb-1">Valor da sua hora de trabalho (R$)</label>
+                                <input id="hourly-rate" type="number" placeholder="Ex: 50" class="w-full p-3 text-lg">
+                            </div>
+                            <div class="text-left">
+                                <label for="lost-hours" class="block text-sm font-medium mb-1">Horas perdidas por mês com retrabalho</label>
+                                <input id="lost-hours" type="number" placeholder="Ex: 8" class="w-full p-3 text-lg">
+                            </div>
+                        </div>
+                        <div class="calculator-result text-center p-6 rounded-lg">
+                            <p class="text-lg text-secondary">Prejuízo mensal estimado:</p>
+                            <p id="loss-result" class="text-5xl font-bold my-2">R$ 0,00</p>
+                            <a href="#pricing" class="btn btn-primary mt-4">Quero parar de perder dinheiro</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
         <!-- App Visual Section -->
         <section class="py-20 px-6">
             <div class="container mx-auto text-center">
@@ -98,6 +125,36 @@
                         <h4 class="text-xl font-bold mb-2">Relatórios Visuais</h4>
                         <p>Gráficos em tempo real mostram a distribuição do tempo por projeto, ajudando na tomada de decisão.</p>
                     </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Interactive Dashboard Sandbox -->
+        <section id="sandbox" class="py-20 px-6 section-bg">
+            <div class="container mx-auto text-center">
+                <h3 class="text-3xl md:text-4xl font-bold animate-on-scroll">Experimente a simplicidade</h3>
+                <p class="text-lg mt-2 mb-8 animate-on-scroll delay-1 text-secondary">Interaja com uma demonstração do nosso painel e veja como é fácil começar.</p>
+                <div class="card max-w-4xl mx-auto p-8 animate-on-scroll delay-2">
+                    <div class="flex flex-col md:flex-row items-center justify-between gap-8">
+                        <!-- Timer -->
+                        <div class="text-center">
+                            <p class="font-semibold mb-2">Rastreie seu tempo</p>
+                            <div id="sandbox-timer" class="text-4xl font-mono mb-4">00:00:00</div>
+                            <button id="sandbox-start-btn" class="btn btn-success">Iniciar</button>
+                        </div>
+                        <!-- Chart -->
+                        <div class="text-center w-full md:w-1/2">
+                            <p class="font-semibold mb-2">Acompanhe seus projetos</p>
+                            <div class="sandbox-chart-container rounded-lg p-4">
+                                <div class="flex justify-between text-sm text-secondary"><span>Projeto A</span><span>Projeto B</span></div>
+                                <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-4 mt-2">
+                                    <div id="sandbox-chart-bar" class="bg-primary h-4 rounded-full" style="width: 25%; transition: width 0.5s ease-in-out;"></div>
+                                </div>
+                            </div>
+                            <button id="sandbox-add-hours-btn" class="btn btn-secondary mt-4">Adicionar Horas</button>
+                        </div>
+                    </div>
+                    <a href="#pricing" class="btn btn-primary text-lg px-8 py-3 mt-12">Começar Agora Gratuitamente</a>
                 </div>
             </div>
         </section>
@@ -154,37 +211,51 @@
     </main>
 
     <!-- Testimonials Section -->
-    <section id="testimonials" class="py-20 px-6">
+    <section id="testimonials" class="py-20 px-6 section-bg">
         <div class="container mx-auto">
             <div class="text-center mb-12">
-                <h3 class="text-3xl md:text-4xl font-bold animate-on-scroll">O que nossos clientes dizem</h3>
-                <p class="text-lg mt-2 animate-on-scroll delay-1">Empresas que transformaram sua produtividade com o Milla's Free.</p>
+                <h3 class="text-3xl md:text-4xl font-bold animate-on-scroll">Histórias de Transformação</h3>
+                <p class="text-lg mt-2 animate-on-scroll delay-1">Veja como resolvemos problemas reais de gestão.</p>
             </div>
-            <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-6xl mx-auto">
-                <!-- Testimonial 1 -->
+            <div class="grid md:grid-cols-1 lg:grid-cols-2 gap-12 max-w-6xl mx-auto">
+                <!-- Story 1 -->
                 <div class="card animate-on-scroll delay-1">
-                    <p class="text-secondary mb-4">"A transparência que o Milla's Free trouxe para nossa equipe de freelancers foi um divisor de águas. Finalmente temos dados claros para gerenciar nossos projetos."</p>
-                    <p class="font-bold">Ana Silva</p>
-                    <p class="text-sm text-primary">CEO, Agência Criativa</p>
+                    <div class="transformation-story">
+                        <div class="before">
+                            <h4 class="font-bold text-red-500">ANTES</h4>
+                            <p class="text-secondary">"Pagávamos por horas extras não documentadas e tínhamos dificuldade em justificar os custos para os clientes."</p>
+                        </div>
+                        <div class="after mt-4">
+                            <h4 class="font-bold text-green-500">DEPOIS</h4>
+                            <p class="text-secondary">"Com o Milla's Free, economizamos em média <span class="font-bold text-primary">R$ 1.200/mês</span> em horas indevidas e aumentamos a confiança dos nossos clientes."</p>
+                        </div>
+                    </div>
+                    <div class="mt-4 pt-4 border-t border-border-color">
+                        <p class="font-bold">Ana Silva, CEO da Agência Criativa</p>
+                    </div>
                 </div>
-                <!-- Testimonial 2 -->
+                <!-- Story 2 -->
                 <div class="card animate-on-scroll delay-2">
-                    <p class="text-secondary mb-4">"A simplicidade do time tracker é o ponto forte. Nossos colaboradores adotaram a ferramenta imediatamente, sem nenhuma resistência."</p>
-                    <p class="font-bold">Marcos Rocha</p>
-                    <p class="text-sm text-primary">Diretor de TI, Tech Solutions</p>
-                </div>
-                <!-- Testimonial 3 -->
-                <div class="card animate-on-scroll delay-3">
-                    <p class="text-secondary mb-4">"Os relatórios visuais nos ajudaram a identificar gargalos que nem sabíamos que existiam. Nossa eficiência aumentou em mais de 20%."</p>
-                    <p class="font-bold">Juliana Costa</p>
-                    <p class="text-sm text-primary">Gerente de Projetos, Construtora Inova</p>
+                    <div class="transformation-story">
+                        <div class="before">
+                            <h4 class="font-bold text-red-500">ANTES</h4>
+                            <p class="text-secondary">"Nossos projetos sempre estouravam o prazo e o orçamento, mas não sabíamos exatamente onde estava o gargalo."</p>
+                        </div>
+                        <div class="after mt-4">
+                            <h4 class="font-bold text-green-500">DEPOIS</h4>
+                            <p class="text-secondary">"Os relatórios visuais mostraram que uma fase específica consumia 40% do tempo. Otimizamos o processo e agora entregamos <span class="font-bold text-primary">15% mais rápido</span>."</p>
+                        </div>
+                    </div>
+                    <div class="mt-4 pt-4 border-t border-border-color">
+                        <p class="font-bold">Marcos Rocha, Diretor de TI</p>
+                    </div>
                 </div>
             </div>
         </div>
     </section>
 
     <!-- Pricing Section -->
-    <section id="pricing" class="py-20 px-6">
+    <section id="pricing" class="py-20 px-6 section-bg">
         <div class="container mx-auto">
             <div class="text-center mb-12">
                 <h3 class="text-3xl md:text-4xl font-bold animate-on-scroll">Planos que se adaptam à sua equipe</h3>
@@ -196,37 +267,40 @@
                     <h4 class="text-2xl font-bold mb-2">Free</h4>
                     <p class="text-4xl font-extrabold mb-4">R$0</p>
                     <p class="text-secondary mb-6">Para equipes pequenas e freelancers que estão começando.</p>
-                    <ul class="text-left space-y-2 mb-8">
+                    <ul class="text-left space-y-3 mb-8">
                         <li class="flex items-center gap-2"><i class="fas fa-check-circle text-green-500"></i> Até 3 membros</li>
                         <li class="flex items-center gap-2"><i class="fas fa-check-circle text-green-500"></i> Rastreamento de tempo</li>
                         <li class="flex items-center gap-2"><i class="fas fa-check-circle text-green-500"></i> Gestão de tarefas básicas</li>
                     </ul>
+                    <p class="text-xs text-secondary mt-auto pt-4">Ideal para começar a organizar seu tempo.</p>
                     <a href="index.html" class="btn btn-secondary w-full">Começar Gratuitamente</a>
                 </div>
                 <!-- Pro Plan -->
-                <div class="card feature-card-landing animate-on-scroll delay-2 pricing-pro relative">
+                <div class="card feature-card-landing animate-on-scroll delay-2 pricing-pro relative flex flex-col">
                     <div class="absolute -top-4 left-1/2 -translate-x-1/2 bg-yellow-400 text-black font-bold px-3 py-1 rounded-full text-sm">ESCOLHA POPULAR</div>
                     <h4 class="text-2xl font-bold mb-2">Pro</h4>
                     <p class="text-4xl font-extrabold mb-4">R$19<span class="text-lg">,90</span></p>
                     <p class="text-secondary mb-6">/membro/mês</p>
-                    <ul class="text-left space-y-2 mb-8">
+                    <ul class="text-left space-y-3 mb-8">
                         <li class="flex items-center gap-2"><i class="fas fa-check-circle text-green-500"></i> Até 15 membros</li>
                         <li class="flex items-center gap-2"><i class="fas fa-check-circle text-green-500"></i> Relatórios avançados</li>
                         <li class="flex items-center gap-2"><i class="fas fa-check-circle text-green-500"></i> Exportação de dados (CSV)</li>
                         <li class="flex items-center gap-2"><i class="fas fa-check-circle text-green-500"></i> Suporte prioritário</li>
                     </ul>
+                    <p class="text-xs text-secondary mt-auto pt-4">Recupere o valor em menos de 1h de trabalho/mês.</p>
                     <a href="index.html" class="btn btn-primary w-full">Experimente o Pro</a>
                 </div>
                 <!-- Enterprise Plan -->
-                <div class="card feature-card-landing animate-on-scroll delay-3">
+                <div class="card feature-card-landing animate-on-scroll delay-3 flex flex-col">
                     <h4 class="text-2xl font-bold mb-2">Enterprise</h4>
                     <p class="text-4xl font-extrabold mb-4">Contato</p>
                     <p class="text-secondary mb-6">Para grandes empresas com necessidades específicas.</p>
-                    <ul class="text-left space-y-2 mb-8">
+                    <ul class="text-left space-y-3 mb-8">
                         <li class="flex items-center gap-2"><i class="fas fa-check-circle text-green-500"></i> Membros ilimitados</li>
                         <li class="flex items-center gap-2"><i class="fas fa-check-circle text-green-500"></i> Integrações personalizadas</li>
                         <li class="flex items-center gap-2"><i class="fas fa-check-circle text-green-500"></i> Gerente de conta dedicado</li>
                     </ul>
+                    <p class="text-xs text-secondary mt-auto pt-4">Soluções sob medida para o seu negócio.</p>
                     <a href="mailto:contato@millasfree.com" class="btn btn-secondary w-full">Fale Conosco</a>
                 </div>
             </div>
@@ -234,7 +308,7 @@
     </section>
 
     <!-- FAQ Section -->
-    <section id="faq" class="py-20 px-6 section-bg">
+    <section id="faq" class="py-20 px-6">
         <div class="container mx-auto max-w-4xl">
             <div class="text-center mb-12">
                 <h3 class="text-3xl md:text-4xl font-bold animate-on-scroll">Perguntas Frequentes</h3>
@@ -284,6 +358,61 @@
             initThemeManager('theme-toggle');
             // Inicializa animações de scroll para os cards
             initScrollAnimations('.animate-on-scroll');
+
+            // --- Logic for Gain/Loss Calculator ---
+            const hourlyRateInput = document.getElementById('hourly-rate');
+            const lostHoursInput = document.getElementById('lost-hours');
+            const lossResultEl = document.getElementById('loss-result');
+
+            function calculateLoss() {
+                const rate = parseFloat(hourlyRateInput.value) || 0;
+                const hours = parseFloat(lostHoursInput.value) || 0;
+                const totalLoss = rate * hours;
+                lossResultEl.textContent = `R$ ${totalLoss.toFixed(2).replace('.', ',')}`;
+            }
+
+            hourlyRateInput.addEventListener('input', calculateLoss);
+            lostHoursInput.addEventListener('input', calculateLoss);
+
+            // --- Logic for Sandbox Dashboard ---
+            const sandboxTimerEl = document.getElementById('sandbox-timer');
+            const sandboxStartBtn = document.getElementById('sandbox-start-btn');
+            const sandboxAddHoursBtn = document.getElementById('sandbox-add-hours-btn');
+            const sandboxChartBar = document.getElementById('sandbox-chart-bar');
+            
+            let sandboxTimerInterval;
+            let sandboxSeconds = 0;
+
+            sandboxStartBtn.addEventListener('click', () => {
+                if (sandboxStartBtn.textContent === 'Iniciar') {
+                    sandboxStartBtn.textContent = 'Parar';
+                    sandboxStartBtn.classList.replace('btn-success', 'btn-danger');
+                    sandboxTimerInterval = setInterval(() => {
+                        sandboxSeconds++;
+                        const h = String(Math.floor(sandboxSeconds / 3600)).padStart(2, '0');
+                        const m = String(Math.floor((sandboxSeconds % 3600) / 60)).padStart(2, '0');
+                        const s = String(sandboxSeconds % 60).padStart(2, '0');
+                        sandboxTimerEl.textContent = `${h}:${m}:${s}`;
+                    }, 1000);
+                } else {
+                    // Para o cronômetro e reseta o estado do botão e do tempo
+                    clearInterval(sandboxTimerInterval);
+                    sandboxStartBtn.textContent = 'Iniciar';
+                    sandboxStartBtn.classList.replace('btn-danger', 'btn-success');
+                    sandboxSeconds = 0;
+                    sandboxTimerEl.textContent = '00:00:00';
+                }
+            });
+
+            sandboxAddHoursBtn.addEventListener('click', () => {
+                let currentWidth = parseFloat(sandboxChartBar.style.width) || 0;
+                let newWidth = currentWidth + 15;
+                // Se a barra estiver cheia, reseta para um valor inicial no próximo clique
+                if (currentWidth >= 100) {
+                    newWidth = 15;
+                }
+                sandboxChartBar.style.width = `${newWidth}%`;
+            });
         });
     </script>
 

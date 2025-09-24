@@ -268,6 +268,17 @@ input:focus, select:focus {
     box-shadow: 0 0 0 3px rgba(138, 92, 246, 0.2);
 }
 
+/* Oculta os botões de "spin" (setas de aumentar/diminuir) nos inputs do tipo number */
+input[type=number]::-webkit-inner-spin-button,
+input[type=number]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+input[type=number] {
+  -moz-appearance: textfield;
+}
+
 /* --- Tabela --- */
 .data-table-container {
     width: 100%;
@@ -372,6 +383,16 @@ input:focus, select:focus {
 .animate-on-scroll.delay-3 { transition-delay: 0.3s; }
 .animate-on-scroll.delay-4 { transition-delay: 0.4s; }
 
+/* --- Calculator Section --- */
+.calculator-result {
+    background-color: var(--bg-main);
+}
+
+/* --- Sandbox Section --- */
+.sandbox-chart-container {
+    background-color: var(--bg-main);
+}
+
 /* --- Pricing Section --- */
 .pricing-pro {
     border-color: var(--accent-purple);
@@ -390,6 +411,11 @@ input:focus, select:focus {
 .faq-item[open] summary::after {
     transform: rotate(180deg);
 }
+
+/* --- Transformation Story Section --- */
+.transformation-story .before { border-left: 4px solid var(--status-red); padding-left: 1rem; }
+.transformation-story .after { border-left: 4px solid var(--status-green); padding-left: 1rem; }
+
 
 .dark .landing-header a.font-semibold:hover {
     color: var(--text-primary);
