@@ -22,7 +22,7 @@ O sistema permite que gestores de empresas gerenciem suas equipes e tarefas, enq
 
 ---
 
-## ⚙️ Funcionalidades
+## Funcionalidades
 
 ### Painel Principal (Gestor/Empresa)
 - **Autenticação Segura:** Cadastro e login com e-mail/senha, verificação de e-mail e recuperação de senha.
@@ -80,6 +80,6 @@ O projeto foi construído com uma abordagem moderna e escalável, utilizando tec
 
 ---
 
-## 📄 Licença
+## Licença
 
 Este projeto é de uso educacional e não possui licença comercial definida até o momento.
