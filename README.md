@@ -1,10 +1,10 @@
-# 🕒 Milla's Free — Gerenciamento de Tempo para Equipes
+# Milla's Free — Gerenciamento de Tempo para Equipes
 
 ![Firebase](https://img.shields.io/badge/Built%20with-Firebase-orange.svg)
 ![Tailwind CSS](https://img.shields.io/badge/Styled%20with-TailwindCSS-38B2AC.svg)
 ![JavaScript](https://img.shields.io/badge/JavaScript-ES6%2B-F7DF1E.svg)
 
-## 📌 Descrição
+## Descrição
 
 O **Milla's Free** é uma plataforma web para gerenciamento de tempo, desenvolvida como projeto de TCC no [SENAI](https://www.fiemg.com.br/senai/) — CTTI. A solução foi proposta pela [3AQ Tecnologia](https://plataforma.gpinovacao.senai.br/plataforma/demandas-da-industria/interna/11183) com o objetivo de otimizar o **rastreamento do tempo gasto por colaboradores e freelancers** em tarefas e projetos.
 
@@ -12,7 +12,7 @@ O sistema permite que gestores de empresas gerenciem suas equipes e tarefas, enq
 
 ---
 
-## 🎯 Objetivos
+## Objetivos
 
 - **Reduzir conflitos:** Garantir clareza sobre o tempo investido em cada tarefa.
 - **Aumentar a produtividade:** Identificar gargalos e melhorar a alocação de recursos.
@@ -44,7 +44,7 @@ O sistema permite que gestores de empresas gerenciem suas equipes e tarefas, enq
 
 ---
 
-## 🛡️ Restrições e Requisitos
+## Restrições e Requisitos
 
 - Compatível com **Windows**, **macOS** e **Linux**.
 - Em conformidade com a **Lei Geral de Proteção de Dados (LGPD)**.
@@ -53,7 +53,7 @@ O sistema permite que gestores de empresas gerenciem suas equipes e tarefas, enq
 
 ---
 
-## 🚀 Tecnologias Utilizadas
+##  Tecnologias Utilizadas
 
 O projeto foi construído com uma abordagem moderna e escalável, utilizando tecnologias serverless.
 
@@ -73,7 +73,7 @@ O projeto foi construído com uma abordagem moderna e escalável, utilizando tec
 
 ---
 
-## 👥 Equipe
+## Equipe
 
 - **Equipe de Desenvolvimento:** Alunos do curso técnico do SENAI  
 - **Empresa Parceira:** 3AQ Tecnologia
