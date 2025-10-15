@@ -1,13 +1,11 @@
-import firebaseConfig from './FireBase.js';
+import { auth, db, functions } from './firebase-services.js';
 import { initThemeManager } from './theme-manager.js';
 import { showMessageModal, toggleButtonLoading } from './ui-helpers.js';
-import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-import { getFirestore, collection, query, where, onSnapshot, doc, deleteDoc, setLogLevel, updateDoc, orderBy, getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+import { collection, query, where, onSnapshot, doc, deleteDoc, setLogLevel, updateDoc, orderBy, httpsCallable } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 setLogLevel('warn');
 
-let app, auth, db;
 let userId;
 let allMembers = [];
 let allTasks = [];
@@ -55,10 +53,6 @@ function initUIElements() {
 }
 
 async function initializeDashboard() {
-    app = initializeApp(firebaseConfig);
-    auth = getAuth(app);
-    db = getFirestore(app);
-
     onAuthStateChanged(auth, (user) => {
         if (user) {
             userId = user.uid;
@@ -329,9 +323,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
             try {
                 // Chama a Cloud Function para criar o membro e gerar o token de forma segura.
-                const functions = getFunctions(app);
-                const createMemberWithToken = httpsCallable(functions, 'createMemberToken');
-                const result = await createMemberWithToken({ name: memberName, email: memberEmail });
+                const createMemberAndToken = httpsCallable(functions, 'createMemberAndToken');
+                const result = await createMemberAndToken({ name: memberName, email: memberEmail });
 
                 const newToken = result.data.token;
 
@@ -383,7 +376,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (confirmed) {
                     try {
                         // Chama a Cloud Function para regenerar o token de forma segura.
-                        const functions = getFunctions(app);
                         const regenerateToken = httpsCallable(functions, 'regenerateMemberToken');
                         await regenerateToken({ memberId: memberId });
 

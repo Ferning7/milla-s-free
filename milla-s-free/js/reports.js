@@ -1,15 +1,13 @@
-import firebaseConfig from './FireBase.js';
+import { auth, db } from './firebase-services.js';
 import { initThemeManager } from './theme-manager.js';
 import { showMessageModal, formatDuration } from './ui-helpers.js';
-import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-import { getFirestore, collection, query, where, onSnapshot, orderBy, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+import { collection, query, where, onSnapshot, orderBy, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // Chart instances
 let hoursByProjectChart, hoursByMemberChart, hoursTrendChart;
 let allTimeEntries = [];
 let membersMap = new Map();
-let db, auth, userId;
 
 // --- CHART RENDERING FUNCTIONS ---
 
@@ -175,11 +173,7 @@ async function fetchData(startDate, endDate) {
 
 // --- INITIALIZATION ---
 
-async function initializePage() {
-    const app = initializeApp(firebaseConfig);
-    db = getFirestore(app);
-    auth = getAuth(app);
-
+export function initReportsPage() {
     onAuthStateChanged(auth, async (user) => {
         if (user) {
             userId = user.uid;
@@ -199,12 +193,6 @@ async function initializePage() {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-    initializePage();
-    initThemeManager('theme-toggle', () => {
-        // Re-render charts on theme change to update colors
-        processDataForCharts(allTimeEntries);
-    });
-
     // Profile modal logic
     const profileToggle = document.getElementById('profile-toggle');
     const profileModal = document.getElementById('profile-modal');

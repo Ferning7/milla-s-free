@@ -1,14 +1,12 @@
-import firebaseConfig from './FireBase.js';
+import { auth, db } from './firebase-services.js';
 import { initThemeManager } from './theme-manager.js';
 import { showMessageModal, formatDuration, updateChart, toggleButtonLoading } from './ui-helpers.js';
 import { Timer } from './timer.js';
-import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-import { getAuth, onAuthStateChanged, signOut, sendPasswordResetEmail, sendEmailVerification } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-import { getFirestore, doc, getDoc, addDoc, setDoc, updateDoc, deleteDoc, onSnapshot, collection, query, where, orderBy, limit, startAfter, endBefore, getDocs, setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { onAuthStateChanged, signOut, sendPasswordResetEmail, sendEmailVerification } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+import { doc, getDoc, addDoc, setDoc, updateDoc, deleteDoc, onSnapshot, collection, query, where, orderBy, limit, startAfter, endBefore, getDocs, setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 setLogLevel('warn');
 
-let app, auth, db;
 let userId;
 let appId;
 let pageQueryCursors = []; // Armazena o primeiro documento de cada página
@@ -84,19 +82,11 @@ function initUIElements() {
 
 async function initializeFirebase() {
     try {
-        if (Object.keys(firebaseConfig).length > 0) {
-            app = initializeApp(firebaseConfig);
-            auth = getAuth(app);
-            db = getFirestore(app);
-
-            onAuthStateChanged(auth, async (user) => {
+        onAuthStateChanged(auth, async (user) => {
                 if (user) {
                     userId = user.uid;
                     console.log("Usuário autenticado:", userId); 
                     document.getElementById('dashboard-content').classList.remove('hidden'); // Mostra o painel
-
-                    appId = firebaseConfig.appId;
-                    appIdDisplay.textContent = appId;
 
                     projectInput.disabled = false;
                     fetchTimeEntriesPage('first'); // Carrega a primeira página em vez de tudo
@@ -117,11 +107,7 @@ async function initializeFirebase() {
                     // Se não houver usuário, redireciona para a landing page para fazer login
                     window.location.href = 'landing.html';
                 }
-            });
-        } else {
-            console.error("Configuração do Firebase não encontrada.");
-            showMessageModal("Ocorreu um erro ao inicializar o aplicativo. Por favor, tente novamente.");
-        }
+        });
     } catch (error) {
         console.error("Erro na inicialização do Firebase:", error);
         showMessageModal("Ocorreu um erro ao inicializar o aplicativo. Por favor, tente novamente.");

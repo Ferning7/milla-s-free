@@ -265,7 +265,12 @@ html:not(.dark) .landing-header {
     color: var(--accent-purple);
 }
 
-input, select {
+input[type="text"],
+input[type="email"],
+input[type="password"],
+input[type="number"],
+input[type="date"],
+select {
     background-color: var(--bg-main);
     border: 1px solid var(--border-color);
     border-radius: 8px;

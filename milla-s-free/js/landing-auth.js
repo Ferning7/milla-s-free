@@ -1,12 +1,8 @@
-import firebaseConfig from './FireBase.js';
+import { auth } from './firebase-services.js';
 import { showMessageModal } from './ui-helpers.js';
-import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-import { getAuth, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+import { signInWithEmailAndPassword, setPersistence, browserSessionPersistence, browserLocalPersistence } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 
 export function initLandingAuth() {
-    const app = initializeApp(firebaseConfig);
-    const auth = getAuth(app);
-
     const loginModal = document.getElementById('login-modal');
     const openLoginModalBtn = document.getElementById('open-login-modal-btn');
     const loginForm = document.getElementById('login-form');
@@ -44,8 +40,13 @@ export function initLandingAuth() {
         e.preventDefault();
         const email = loginForm['login-email'].value;
         const password = loginForm['login-password'].value;
+        const rememberMe = loginForm['remember-me'].checked;
 
         try {
+            // Define a persistência ANTES de fazer o login
+            const persistence = rememberMe ? browserLocalPersistence : browserSessionPersistence;
+            await setPersistence(auth, persistence);
+
             await signInWithEmailAndPassword(auth, email, password);
             // Login bem-sucedido, redireciona para o painel
             window.location.href = 'index.html';

@@ -1,12 +1,10 @@
-import firebaseConfig from './FireBase.js';
+import { auth, db } from './firebase-services.js';
 import { initThemeManager } from './theme-manager.js';
 import { Timer } from './timer.js';
 import { formatDuration } from './ui-helpers.js';
-import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-import { getFirestore, doc, getDoc, addDoc, collection, query, where, onSnapshot, orderBy } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+import { doc, getDoc, addDoc, collection, query, where, onSnapshot, orderBy } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-let app, auth, db;
 let memberId, companyId;
 let timer;
 
@@ -24,10 +22,6 @@ function initUIElements() {
 
 async function initializeFirebase() {
     try {
-        app = initializeApp(firebaseConfig);
-        auth = getAuth(app);
-        db = getFirestore(app);
-
         onAuthStateChanged(auth, async (user) => {
             if (user) {
                 // O UID do usuário logado com custom token é o ID do membro no Firestore

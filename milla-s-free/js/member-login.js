@@ -1,17 +1,12 @@
-import firebaseConfig from './FireBase.js';
+import { auth, functions } from './firebase-services.js';
 import { applyInitialTheme } from './theme-manager.js';
 import { showMessageModal } from './ui-helpers.js';
-import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-import { getAuth, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-functions.js";
+import { signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+import { httpsCallable } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-functions.js";
 
 applyInitialTheme();
 
-// Inicialização do Firebase
-const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
-const functions = getFunctions(app);
-const exchangeTokenForAuth = httpsCallable(functions, 'exchangeToken');
+const exchangeTokenForAuth = httpsCallable(functions, 'exchangeTokenForAuth');
 
 document.addEventListener('DOMContentLoaded', () => {
     const memberLoginForm = document.getElementById('member-login-form');

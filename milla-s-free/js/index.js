@@ -1,5 +1,6 @@
 const {onCall, HttpsError} = require("firebase-functions/v2/https");
 const {initializeApp} = require("firebase-admin/app");
+const admin = require("firebase-admin");
 const {getFirestore} = require("firebase-admin/firestore");
 const {v4: uuidv4} = require("uuid");
 
@@ -16,7 +17,7 @@ function generateSecureToken() {
 }
 
 
-exports.createMemberToken = onCall(async (request) => {
+exports.createMemberAndToken = onCall(async (request) => {
   // 1. Verificação de Autenticação
   if (!request.auth) {
     throw new HttpsError(
@@ -61,6 +62,47 @@ exports.createMemberToken = onCall(async (request) => {
 });
 
 /**
+ * Cloud Function para trocar um token de acesso de um membro
+ * por um token de autenticação customizado do Firebase.
+ */
+exports.exchangeTokenForAuth = onCall(async (data, context) => {
+  const accessToken = data.token;
+
+  if (!accessToken || typeof accessToken !== "string") {
+    throw new HttpsError(
+      "invalid-argument",
+      "O token fornecido é inválido."
+    );
+  }
+
+  // Procura o membro que possui este token de acesso
+  const membersRef = db.collection("members");
+  const snapshot = await membersRef.where("accessToken", "==", accessToken).limit(1).get();
+
+  if (snapshot.empty) {
+    throw new HttpsError(
+      "not-found",
+      "Token de acesso inválido ou expirado."
+    );
+  }
+
+  const memberDoc = snapshot.docs[0];
+  const memberId = memberDoc.id; // O ID do documento do membro será o UID dele
+
+  try {
+    // Gera o token de autenticação customizado para o UID do membro
+    const firebaseAuthToken = await admin.auth().createCustomToken(memberId);
+    return { token: firebaseAuthToken };
+  } catch (error) {
+    console.error("Erro ao criar custom token:", error);
+    throw new HttpsError(
+      "internal",
+      "Não foi possível gerar o token de autenticação."
+    );
+  }
+});
+
+/**
  * Cloud Function para regenerar o token de um colaborador existente.
  */
 exports.regenerateMemberToken = onCall(async (request) => {
@@ -89,7 +131,7 @@ exports.regenerateMemberToken = onCall(async (request) => {
     }
 
     const newLoginToken = generateSecureToken();
-    await memberRef.update({loginToken: newLoginToken});
+    await memberRef.update({accessToken: newLoginToken});
 
     return {success: true, message: "Token regenerado com sucesso."};
   } catch (error) {
