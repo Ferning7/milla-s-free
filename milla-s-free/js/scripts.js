@@ -22,9 +22,8 @@ let membersMap = new Map();
 
 let timerDisplay, startButton, stopButton, projectInput, timeEntriesTbody, statTotalHours, statActiveProjects, statTeamMembers, statPendingEntries,
     prevPageButton, nextPageButton, paginationControls, editModal, editEntryIdInput,
-    editProjectInput, editDateInput, editHoursInput, editMinutesInput, editSecondsInput,
-    saveEditButton, cancelEditButton, profilePicLink,
-    profileModal, userView, guestView, userEmailDisplay, logoutButton, shareToggle, shareModal, appIdDisplay,
+    editProjectInput, editDateInput, editHoursInput, editMinutesInput, editSecondsInput, saveEditButton, cancelEditButton,
+    profileToggle, profileModal, userEmailDisplay, logoutButton, shareToggle, shareModal, appIdDisplay,
     copyAppIdButton, closeShareModalButton, menuToggleMain, messageModal, messageText, messageOkButton, messageCancelButton, forgotPasswordLink,
     forgotPasswordModal, forgotPasswordForm, forgotEmailInput, cancelForgotButton,
     taskSelectionModal, existingTasksList, newTaskInput, startTimerConfirmButton,
@@ -52,10 +51,8 @@ function initUIElements() {
     editSecondsInput = document.getElementById('edit-seconds');
     saveEditButton = document.getElementById('save-edit-button');
     cancelEditButton = document.getElementById('cancel-edit-button'); 
-    profilePicLink = document.querySelector('.profile-pic');
+    profileToggle = document.getElementById('profile-toggle');
     profileModal = document.getElementById('profile-modal');
-    userView = document.getElementById('user-view');
-    guestView = document.getElementById('guest-view');
     userEmailDisplay = document.getElementById('user-email-display');
     logoutButton = document.getElementById('logout-button');
     shareToggle = document.getElementById('share-toggle');
@@ -118,20 +115,20 @@ document.addEventListener('DOMContentLoaded', () => {
     initUIElements();
     initializeFirebase();
     initThemeManager('theme-toggle');
-
-    if (userView) {
-        userView.addEventListener('click', async (e) => {
-            if (e.target.id === 'resend-verification-button') {
-                try {
-                    await sendEmailVerification(auth.currentUser);
-                    showMessageModal("Um novo e-mail de verificação foi enviado.");
-                } catch (error) {
-                    console.error("Erro ao reenviar email de verificação:", error);
-                    showMessageModal("Erro ao reenviar e-mail. Tente novamente mais tarde.");
-                }
-            }
+    
+    // Lógica do Modal de Perfil
+    if (profileToggle) {
+        profileToggle.addEventListener('click', (e) => {
+            e.stopPropagation();
+            profileModal.classList.toggle('hidden');
         });
     }
+    document.addEventListener('click', (e) => {
+        if (profileModal && !profileModal.classList.contains('hidden') && !profileModal.contains(e.target) && !profileToggle.contains(e.target)) {
+            profileModal.classList.add('hidden');
+        }
+    });
+
 
     if (startButton) startButton.addEventListener('click', handleStartTimer);
     if (saveEditButton) saveEditButton.addEventListener('click', saveEditedEntry);
@@ -217,18 +214,16 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // Logout em todas as páginas
-    document.querySelectorAll('.sidebar-logout-item a').forEach(button => {
-        button.addEventListener('click', async (e) => {
-            e.preventDefault(); // Previne a navegação padrão do link
-            try {
-                await signOut(auth);
-                window.location.href = 'landing.html'; // Redireciona para a landing page após o logout
-            } catch (error) {
-                console.error("Erro ao fazer logout:", error);
-                showMessageModal("Erro ao sair. Tente novamente.");
-            }
-        });
-    });
+    if (logoutButton) {
+        logoutButton.addEventListener('click', async (e) => {
+        e.preventDefault();
+        try {
+            await signOut(auth);
+            window.location.href = 'landing.html';
+        } catch (error) {
+            console.error("Erro ao fazer logout:", error);
+        }
+    });}
 
     if (prevPageButton) {
         prevPageButton.addEventListener('click', () => {
@@ -245,6 +240,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
 function updateVerificationStatus(user) {
     const verificationStatusEl = document.getElementById('verification-status');
+    if (userEmailDisplay) userEmailDisplay.textContent = user.email;
+
+
     if (!verificationStatusEl) return;
 
     verificationStatusEl.innerHTML = '';
@@ -269,6 +267,16 @@ function updateVerificationStatus(user) {
         resendButton.textContent = 'Reenviar';
         containerDiv.append(unverifiedSpan, resendButton);
         verificationStatusEl.appendChild(containerDiv);
+
+        resendButton.addEventListener('click', async () => {
+            try {
+                await sendEmailVerification(auth.currentUser);
+                showMessageModal("Um novo e-mail de verificação foi enviado.");
+            } catch (error) {
+                console.error("Erro ao reenviar email de verificação:", error);
+                showMessageModal("Erro ao reenviar e-mail. Tente novamente mais tarde.");
+            }
+        });
     }
 }
 

@@ -9,15 +9,26 @@ let memberId, companyId;
 let timer;
 
 function initUIElements() {
+    const profileToggle = document.getElementById('profile-toggle');
+    const profileModal = document.getElementById('profile-modal');
     const logoutButton = document.getElementById('logout-button');
-    logoutButton.addEventListener('click', async () => {
-        try {
-            await signOut(auth);
-            window.location.href = 'member-login.html';
-        } catch (error) {
-            console.error("Erro ao fazer logout:", error);
+
+    if (profileToggle) {
+        profileToggle.addEventListener('click', (e) => {
+            e.stopPropagation();
+            profileModal.classList.toggle('hidden');
+        });
+    }
+
+    document.addEventListener('click', (e) => {
+        if (profileModal && !profileModal.classList.contains('hidden') && !profileModal.contains(e.target) && !profileToggle.contains(e.target)) {
+            profileModal.classList.add('hidden');
         }
     });
+
+    if (logoutButton) {
+        logoutButton.addEventListener('click', () => signOut(auth).catch(err => console.error("Logout error", err)));
+    }
 }
 
 async function initializeFirebase() {
@@ -35,7 +46,10 @@ async function initializeFirebase() {
                 if (memberDocSnap.exists()) {
                     const memberData = memberDocSnap.data();
                     companyId = memberData.companyId;
-                    document.getElementById('member-name-display').textContent = memberData.name;
+                    const memberNameDisplay = document.getElementById('member-name-display');
+                    if (memberNameDisplay) {
+                        memberNameDisplay.textContent = memberData.name;
+                    }
 
                     // Inicializar funcionalidades da página
                     setupTimeEntriesListener();
@@ -50,7 +64,8 @@ async function initializeFirebase() {
                     );
                 } else {
                     console.error("Documento do membro não encontrado!");
-                    await signOut(auth);
+                    await signOut(auth).catch(err => console.error("Sign out failed", err));
+                    // O onAuthStateChanged vai pegar o logout e redirecionar
                 }
             } else {
                 // Se não houver usuário, redireciona para a página de login do membro

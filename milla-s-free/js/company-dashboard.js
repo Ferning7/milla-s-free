@@ -1,8 +1,8 @@
 import { auth, db, functions } from './firebase-services.js';
 import { initThemeManager } from './theme-manager.js';
 import { showMessageModal, toggleButtonLoading } from './ui-helpers.js';
-import { onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-import { collection, query, where, onSnapshot, doc, deleteDoc, setLogLevel, updateDoc, orderBy, httpsCallable } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js';
+import { collection, query, where, onSnapshot, doc, deleteDoc, setLogLevel, updateDoc, orderBy, httpsCallable, addDoc } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js';
 
 setLogLevel('warn');
 
@@ -15,8 +15,7 @@ const membersPageSize = 5;
 let companyEmailDisplay, addMemberButton, membersList, createMemberModal, createMemberForm, cancelCreateMemberButton,
     editMemberModal, editMemberForm, cancelEditMemberButton, saveEditMemberButton, editMemberIdInput, editMemberNameInput,
     editMemberEmailInput, searchMemberInput, membersPaginationControls, prevMembersPageButton, nextMembersPageButton,
-    profileToggle, profileModal, userView, logoutButton,
-    addTaskForm, newTaskNameInput, tasksList, editTaskModal, editTaskForm, cancelEditTaskButton, saveEditTaskButton,
+    profileToggle, profileModal, userEmailDisplay, logoutButton, addTaskForm, newTaskNameInput, tasksList, editTaskModal, editTaskForm, cancelEditTaskButton, saveEditTaskButton,
     editTaskIdInput, editTaskNameInput;
  
 function initUIElements() {
@@ -35,7 +34,7 @@ function initUIElements() {
     editMemberEmailInput = document.getElementById('edit-member-email');
     profileToggle = document.getElementById('profile-toggle');
     profileModal = document.getElementById('profile-modal');
-    userView = document.getElementById('user-view');
+    userEmailDisplay = document.getElementById('user-email-display');
     logoutButton = document.getElementById('logout-button');
     searchMemberInput = document.getElementById('search-member-input');
     membersPaginationControls = document.getElementById('members-pagination-controls');
@@ -56,14 +55,11 @@ async function initializeDashboard() {
     onAuthStateChanged(auth, (user) => {
         if (user) {
             userId = user.uid;
-            if (companyEmailDisplay) companyEmailDisplay.textContent = `Logado como: ${user.email}`;
-            if (userView) {
-                userView.classList.remove('hidden');
-            }
+            if (userEmailDisplay) userEmailDisplay.textContent = user.email;
             setupMembersListener();
             setupTasksListener();
         } else {
-            window.location.href = '../index.html';
+            window.location.href = 'landing.html';
         }
     });
 }
@@ -173,7 +169,7 @@ function setupMembersListener() {
     // Show skeleton
     const skeletonHTML = Array(membersPageSize).fill(`
         <tr class="skeleton-row">
-            <td colspan="3">
+            <td colspan="3" class="p-0">
                 <div class="flex items-center justify-between p-2">
                     <div class="space-y-2"><div class="skeleton skeleton-text w-32"></div><div class="skeleton skeleton-text-sm w-48"></div></div>
                     <div class="skeleton skeleton-text w-24 h-8"></div>
@@ -237,10 +233,7 @@ document.addEventListener('DOMContentLoaded', () => {
         profileToggle.addEventListener('click', (e) => {
             const pageOverlay = document.getElementById('page-overlay');
             e.stopPropagation();
-            if (auth.currentUser && userView) {
-                const userEmailDisplay = userView.querySelector('#user-email-display');
-                if (userEmailDisplay) userEmailDisplay.textContent = auth.currentUser.email;
-            }
+            if (auth.currentUser && userEmailDisplay) userEmailDisplay.textContent = auth.currentUser.email;
             profileModal.classList.toggle('hidden');
             if (pageOverlay) pageOverlay.classList.toggle('hidden');
         });
@@ -248,10 +241,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Listener para fechar o modal de perfil ao clicar fora
     document.addEventListener('click', (e) => {
-        const pageOverlay = document.getElementById('page-overlay');
         if (profileModal && !profileModal.classList.contains('hidden') && !profileModal.contains(e.target) && !profileToggle.contains(e.target)) {
             profileModal.classList.add('hidden');
-            if (pageOverlay) pageOverlay.classList.add('hidden');
         }
     });
 
@@ -259,7 +250,6 @@ document.addEventListener('DOMContentLoaded', () => {
         logoutButton.addEventListener('click', async () => {
             try {
                 await signOut(auth);
-                window.location.href = 'index.html';
             } catch (error) {
                 console.error("Erro ao fazer logout:", error);
                 showMessageModal("Erro ao sair. Tente novamente.");
@@ -269,6 +259,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (addMemberButton) addMemberButton.addEventListener('click', () => createMemberModal.classList.remove('hidden'));
     if (cancelCreateMemberButton) cancelCreateMemberButton.addEventListener('click', () => createMemberModal.classList.add('hidden'));
+
+    // Fecha o modal de criação ao clicar no backdrop
+    if (createMemberModal) {
+        createMemberModal.addEventListener('click', (e) => {
+            if (e.target.id === 'create-member-modal') {
+                createMemberModal.classList.add('hidden');
+            }
+        });
+    }
 
     if (addTaskForm) {
         addTaskForm.addEventListener('submit', async (e) => {
@@ -282,7 +281,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
 
                 try {
-                    await addDoc(collection(db, "tasks"), {
+                    await addDoc(collection(db, 'tasks'), {
                         name: taskName,
                         companyId: userId,
                         createdAt: new Date()
@@ -323,14 +322,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
             try {
                 // Chama a Cloud Function para criar o membro e gerar o token de forma segura.
-                const createMemberAndToken = httpsCallable(functions, 'createMemberAndToken');
-                const result = await createMemberAndToken({ name: memberName, email: memberEmail });
-
-                const newToken = result.data.token;
+                const createMemberWithToken = httpsCallable(functions, 'createMemberAndToken');
+                const result = await createMemberWithToken({ name: memberName, email: memberEmail });
 
                 createMemberModal.classList.add('hidden');
                 createMemberForm.reset();
-                showMessageModal(`Colaborador adicionado! O token de acesso é: ${newToken}. Copie e envie para o colaborador.`);
+                // A lista será atualizada automaticamente pelo onSnapshot.
+                showMessageModal(`Colaborador "${memberName}" adicionado com sucesso!`);
             } catch (error) {
                 console.error("Erro ao adicionar colaborador:", error);
                 const errorMessage = error.message || "Erro ao adicionar colaborador. Tente novamente.";
@@ -425,7 +423,16 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    if (cancelEditMemberButton) cancelEditMemberButton.addEventListener('click', () => editMemberModal.classList.add('hidden'));
+    if (cancelEditMemberButton) cancelEditMemberButton.addEventListener('click', () => editMemberModal.classList.add('hidden')); 
+
+    // Fecha o modal de edição de membro ao clicar no backdrop
+    if (editMemberModal) {
+        editMemberModal.addEventListener('click', (e) => {
+            if (e.target.id === 'edit-member-modal') {
+                editMemberModal.classList.add('hidden');
+            }
+        });
+    }
 
     if (tasksList) {
         tasksList.addEventListener('click', async (e) => {
@@ -451,6 +458,15 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     if (cancelEditTaskButton) cancelEditTaskButton.addEventListener('click', () => editTaskModal.classList.add('hidden'));
+
+    // Fecha o modal de edição de tarefa ao clicar no backdrop
+    if (editTaskModal) {
+        editTaskModal.addEventListener('click', (e) => {
+            if (e.target.id === 'edit-task-modal') {
+                editTaskModal.classList.add('hidden');
+            }
+        });
+    }
 
     if (editTaskForm) {
         editTaskForm.addEventListener('submit', async (e) => {

@@ -40,7 +40,7 @@ exports.createMemberAndToken = onCall(async (request) => {
   try {
     // 3. Geração do Token Seguro no Servidor
     const loginToken = generateSecureToken();
-
+    
     // 4. Criação do documento no Firestore
     await db.collection("members").add({
       name,
@@ -51,7 +51,7 @@ exports.createMemberAndToken = onCall(async (request) => {
     });
 
     // 5. Retorno do token para o cliente
-    return {token: loginToken};
+    return { token: loginToken };
   } catch (error) {
     console.error("Erro ao criar colaborador:", error);
     throw new HttpsError(
@@ -77,7 +77,7 @@ exports.exchangeTokenForAuth = onCall(async (data, context) => {
 
   // Procura o membro que possui este token de acesso
   const membersRef = db.collection("members");
-  const snapshot = await membersRef.where("accessToken", "==", accessToken).limit(1).get();
+  const snapshot = await membersRef.where("loginToken", "==", accessToken).limit(1).get();
 
   if (snapshot.empty) {
     throw new HttpsError(
@@ -131,7 +131,7 @@ exports.regenerateMemberToken = onCall(async (request) => {
     }
 
     const newLoginToken = generateSecureToken();
-    await memberRef.update({accessToken: newLoginToken});
+    await memberRef.update({loginToken: newLoginToken});
 
     return {success: true, message: "Token regenerado com sucesso."};
   } catch (error) {

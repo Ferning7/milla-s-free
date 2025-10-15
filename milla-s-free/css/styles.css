@@ -532,3 +532,29 @@ html:not(.dark) .section-bg {
     width: 320px; /* Largura fixa para o dropdown */
     box-shadow: 0 10px 25px -5px var(--shadow-color), 0 8px 10px -6px var(--shadow-color);
 }
+
+/* --- Loading Skeleton --- */
+.skeleton {
+    animation: pulse 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+    background-color: var(--border-color);
+    border-radius: 0.5rem;
+}
+
+.skeleton-text { height: 1em; }
+.skeleton-text-sm { height: 0.8em; }
+
+@keyframes pulse {
+    50% {
+        opacity: .5;
+    }
+}
+
+/* --- Dropdown Menu (Login Modal) --- */
+.dropdown-menu {
+    position: absolute;
+    top: calc(100% + 10px); /* Posiciona 10px abaixo do header */
+    right: 1.5rem; /* Alinha com o padding do container do nav */
+    z-index: 40; /* Abaixo do header (z-50) mas acima do resto */
+    width: 320px; /* Largura fixa para o dropdown */
+    box-shadow: 0 10px 25px -5px var(--shadow-color), 0 8px 10px -6px var(--shadow-color);
+}
