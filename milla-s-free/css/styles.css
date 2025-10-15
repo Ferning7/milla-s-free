@@ -17,7 +17,7 @@
     --shadow-color: rgba(96, 81, 155, 0.08);
 }
 
-.dark {
+html.dark {
     /* Tema Escuro */
     --bg-main: #1e1b29;
     --bg-card: #2a223d;
@@ -30,7 +30,7 @@
 }
 
 /* --- Cores de Status --- */
-:root, .dark {
+:root, html.dark {
     --status-green: #4CAF50;
     --status-blue: #2196F3;
     --status-red: #F44336;
@@ -149,18 +149,22 @@ body {
 /* --- Cabeçalho --- */
 .main-header {
     display: flex;
-    justify-content: flex-end; /* Alinha ações à direita */
+    justify-content: flex-end; 
     align-items: center;
     margin-bottom: 2rem;
 }
 
 .landing-header {
-    background-color: var(--bg-header-landing-color, rgba(30, 27, 41, 0.8));
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
+    background-color: var(--bg-header-landing-color, rgba(233, 233, 233, 0.8));
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
     border-bottom: 1px solid var(--border-color);
 }
-.light .landing-header {
+html.dark .landing-header {
+    --bg-header-landing-color: rgba(30, 27, 41, 0.75); /* Cor de fundo do tema escuro com transparência */
+}
+
+html:not(.dark) .landing-header {
     --bg-header-landing-color: rgba(248, 249, 250, 0.8);
 }
 
@@ -356,7 +360,7 @@ input[type=number] {
     -webkit-backdrop-filter: blur(4px);
 }
 
-.light .modal-backdrop {
+html:not(.dark) .modal-backdrop {
     background-color: rgba(248, 249, 250, 0.5); /* Versão para tema claro */
 }
 
@@ -425,7 +429,7 @@ input[type=number] {
 .transformation-story .after { border-left: 4px solid var(--status-green); padding-left: 1rem; }
 
 
-.dark .landing-header a.font-semibold:hover {
+html.dark .landing-header a.font-semibold:hover {
     color: var(--text-primary);
 }
 
@@ -433,7 +437,7 @@ input[type=number] {
 .section-bg {
     background-color: var(--bg-secondary);
 }
-.light .section-bg {
+html:not(.dark) .section-bg {
     background-color: #f1f5f9;
 }
 
@@ -512,4 +516,14 @@ input[type=number] {
     50% {
         opacity: .5;
     }
+}
+
+/* --- Dropdown Menu (Login Modal) --- */
+.dropdown-menu {
+    position: absolute;
+    top: calc(100% + 10px); /* Posiciona 10px abaixo do header */
+    right: 1.5rem; /* Alinha com o padding do container do nav */
+    z-index: 40; /* Abaixo do header (z-50) mas acima do resto */
+    width: 320px; /* Largura fixa para o dropdown */
+    box-shadow: 0 10px 25px -5px var(--shadow-color), 0 8px 10px -6px var(--shadow-color);
 }

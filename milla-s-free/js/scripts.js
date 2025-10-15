@@ -3,7 +3,7 @@ import { initThemeManager } from './theme-manager.js';
 import { showMessageModal, formatDuration, updateChart, toggleButtonLoading } from './ui-helpers.js';
 import { Timer } from './timer.js';
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-import { getAuth, onAuthStateChanged, signOut, createUserWithEmailAndPassword, signInWithEmailAndPassword, sendPasswordResetEmail, sendEmailVerification } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+import { getAuth, onAuthStateChanged, signOut, sendPasswordResetEmail, sendEmailVerification } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 import { getFirestore, doc, getDoc, addDoc, setDoc, updateDoc, deleteDoc, onSnapshot, collection, query, where, orderBy, limit, startAfter, endBefore, getDocs, setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 setLogLevel('warn');
@@ -25,12 +25,9 @@ let membersMap = new Map();
 let timerDisplay, startButton, stopButton, projectInput, timeEntriesTbody, statTotalHours, statActiveProjects, statTeamMembers, statPendingEntries,
     prevPageButton, nextPageButton, paginationControls, editModal, editEntryIdInput,
     editProjectInput, editDateInput, editHoursInput, editMinutesInput, editSecondsInput,
-    saveEditButton, cancelEditButton, profileToggle,
-    profileModal, userView, guestView, userEmailDisplay, logoutButton, shareToggle,
-    shareModal, appIdDisplay, copyAppIdButton, closeShareModalButton, showLoginModalButton, menuToggleMain,
-    showRegisterModalButton, loginModal, loginForm, loginEmailInput, loginPasswordInput,
-    cancelLoginButton, registerModal, registerForm, cancelRegisterButton, messageModal,
-    messageText, messageOkButton, messageCancelButton, forgotPasswordLink,
+    saveEditButton, cancelEditButton, profilePicLink,
+    profileModal, userView, guestView, userEmailDisplay, logoutButton, shareToggle, shareModal, appIdDisplay,
+    copyAppIdButton, closeShareModalButton, menuToggleMain, messageModal, messageText, messageOkButton, messageCancelButton, forgotPasswordLink,
     forgotPasswordModal, forgotPasswordForm, forgotEmailInput, cancelForgotButton,
     taskSelectionModal, existingTasksList, newTaskInput, startTimerConfirmButton,
     cancelTaskSelectionButton, memberFilter;
@@ -56,8 +53,8 @@ function initUIElements() {
     editMinutesInput = document.getElementById('edit-minutes');
     editSecondsInput = document.getElementById('edit-seconds');
     saveEditButton = document.getElementById('save-edit-button');
-    cancelEditButton = document.getElementById('cancel-edit-button');
-    profileToggle = document.getElementById('profile-toggle');
+    cancelEditButton = document.getElementById('cancel-edit-button'); 
+    profilePicLink = document.querySelector('.profile-pic');
     profileModal = document.getElementById('profile-modal');
     userView = document.getElementById('user-view');
     guestView = document.getElementById('guest-view');
@@ -68,16 +65,6 @@ function initUIElements() {
     appIdDisplay = document.getElementById('app-id-display');
     copyAppIdButton = document.getElementById('copy-app-id');
     closeShareModalButton = document.getElementById('close-share-modal');
-    showLoginModalButton = document.getElementById('show-login-modal-button');
-    showRegisterModalButton = document.getElementById('show-register-modal-button');
-    loginModal = document.getElementById('login-modal');
-    loginForm = document.getElementById('login-form');
-    loginEmailInput = document.getElementById('login-email');
-    loginPasswordInput = document.getElementById('login-password');
-    cancelLoginButton = document.getElementById('cancel-login-button');
-    registerModal = document.getElementById('register-modal');
-    registerForm = document.getElementById('register-form');
-    cancelRegisterButton = document.getElementById('cancel-register-button');
     messageModal = document.getElementById('message-modal');
     messageText = document.getElementById('message-text');
     messageOkButton = document.getElementById('message-ok');
@@ -105,21 +92,13 @@ async function initializeFirebase() {
             onAuthStateChanged(auth, async (user) => {
                 if (user) {
                     userId = user.uid;
-                    console.log("Usuário autenticado:", userId);
-
-                    userEmailDisplay.textContent = user.email || 'Usuário Anônimo';
-                    guestView.classList.add('hidden');
-                    userView.classList.remove('hidden');
+                    console.log("Usuário autenticado:", userId); 
+                    document.getElementById('dashboard-content').classList.remove('hidden'); // Mostra o painel
 
                     appId = firebaseConfig.appId;
                     appIdDisplay.textContent = appId;
 
                     projectInput.disabled = false;
-
-                    loginModal.classList.add('hidden');
-                    registerModal.classList.add('hidden');
-                    profileModal.classList.add('hidden');
-
                     fetchTimeEntriesPage('first'); // Carrega a primeira página em vez de tudo
                     setupMembersListener();
                     setupRealtimeChart();
@@ -135,12 +114,8 @@ async function initializeFirebase() {
                 } else {
                     userId = null;
                     console.log("Nenhum usuário logado.");
-
-                    userView.classList.add('hidden');
-                    guestView.classList.remove('hidden');
-
-                    disableAppFeatures();
-                    showMessageModal("Por favor, faça login ou cadastre-se para usar o aplicativo.");
+                    // Se não houver usuário, redireciona para a landing page para fazer login
+                    window.location.href = 'landing.html';
                 }
             });
         } else {
@@ -214,24 +189,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    if (profileToggle) {
-        profileToggle.addEventListener('click', (e) => {
-            const pageOverlay = document.getElementById('page-overlay');
-            e.stopPropagation();
-            profileModal.classList.toggle('hidden');
-            if (pageOverlay) pageOverlay.classList.toggle('hidden');
-        });
-    }
-
-    // Listener global no documento para fechar o modal de perfil
-    document.addEventListener('click', (e) => {
-        const pageOverlay = document.getElementById('page-overlay');
-        if (profileModal && !profileModal.contains(e.target) && profileToggle && !profileToggle.contains(e.target)) {
-            profileModal.classList.add('hidden');
-            if (pageOverlay) pageOverlay.classList.add('hidden');
-        }
-    });
-
     if (shareToggle) shareToggle.addEventListener('click', () => shareModal.classList.remove('hidden'));
     if (closeShareModalButton) closeShareModalButton.addEventListener('click', () => shareModal.classList.add('hidden'));
 
@@ -248,27 +205,9 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    if (showLoginModalButton) {
-        showLoginModalButton.addEventListener('click', () => {
-            loginModal.classList.remove('hidden');
-            if (profileModal) profileModal.classList.add('hidden');
-        });
-    }
-
-    if (showRegisterModalButton) {
-        showRegisterModalButton.addEventListener('click', () => {
-            registerModal.classList.remove('hidden');
-            if (profileModal) profileModal.classList.add('hidden');
-        });
-    }
-
-    if (cancelLoginButton) cancelLoginButton.addEventListener('click', () => loginModal.classList.add('hidden'));
-    if (cancelRegisterButton) cancelRegisterButton.addEventListener('click', () => registerModal.classList.add('hidden'));
-
     if (forgotPasswordLink) {
         forgotPasswordLink.addEventListener('click', (e) => {
             e.preventDefault();
-            loginModal.classList.add('hidden');
             forgotPasswordModal.classList.remove('hidden');
         });
     }
@@ -291,56 +230,19 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    if (loginForm) {
-        loginForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const email = loginEmailInput.value;
-            const password = loginPasswordInput.value;
-
-            try {
-                await signInWithEmailAndPassword(auth, email, password);
-                showMessageModal("Login realizado com sucesso!");
-                loginForm.reset();
-            } catch (error) {
-                console.error("Erro no login:", error);
-                showMessageModal(`Erro no login: ${error.message.replace('Firebase: ', '')}`);
-            }
-        });
-    }
-
-    if (registerForm) {
-        registerForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const email = registerForm['register-email'].value;
-            const password = registerForm['register-password'].value;
-
-            try {
-                const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-                
-                // Cria um perfil de empresa inicial para o novo usuário.
-                const companyDocRef = doc(db, "companies", userCredential.user.uid);
-                await setDoc(companyDocRef, { name: email, email: email });
-
-                await sendEmailVerification(userCredential.user);
-                registerForm.reset();
-                showMessageModal("Cadastro realizado com sucesso! Um e-mail de verificação foi enviado para sua caixa de entrada.");
-            } catch (error) {
-                console.error("Erro no cadastro:", error);
-                showMessageModal(`Erro no cadastro: ${error.message.replace('Firebase: ', '')}`);
-            }
-        });
-    }
-
-    if (logoutButton) {
-        logoutButton.addEventListener('click', async () => {
+    // Logout em todas as páginas
+    document.querySelectorAll('.sidebar-logout-item a').forEach(button => {
+        button.addEventListener('click', async (e) => {
+            e.preventDefault(); // Previne a navegação padrão do link
             try {
                 await signOut(auth);
+                window.location.href = 'landing.html'; // Redireciona para a landing page após o logout
             } catch (error) {
                 console.error("Erro ao fazer logout:", error);
                 showMessageModal("Erro ao sair. Tente novamente.");
             }
         });
-    }
+    });
 
     if (prevPageButton) {
         prevPageButton.addEventListener('click', () => {
@@ -353,16 +255,7 @@ document.addEventListener('DOMContentLoaded', () => {
             fetchTimeEntriesPage('next');
         });
     }
-});
-
-function disableAppFeatures() {
-    timer?.reset();
-    projectInput.disabled = true;
-    startButton.disabled = true;
-    stopButton.disabled = true;
-    timeEntriesTbody.innerHTML = `<tr><td colspan="6" class="text-center p-4 text-secondary">Faça login para ver suas entradas de tempo.</td></tr>`;
-    paginationControls.classList.add('hidden');
-}
+}); 
 
 function updateVerificationStatus(user) {
     const verificationStatusEl = document.getElementById('verification-status');

@@ -91,9 +91,13 @@ document.addEventListener('DOMContentLoaded', () => {
     initThemeManager('theme-toggle');
     initThemeManager('theme-toggle-settings');
 
-    app = initializeApp(firebaseConfig);
-    auth = getAuth(app);
-    db = getFirestore(app);
+    // Inicializa o Firebase apenas se ainda não foi inicializado
+    if (!app) { // Verifica se 'app' ainda não foi definido
+        app = initializeApp(firebaseConfig);
+        auth = getAuth(app);
+        db = getFirestore(app);
+    }
+    
 
     const profileForm = document.getElementById('profile-form');
     const companyNameInput = document.getElementById('company-name');

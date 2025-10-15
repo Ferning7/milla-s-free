@@ -9,13 +9,24 @@
     <script>
         tailwind.config = { darkMode: 'class' }
     </script>
+    <script>
+    
+        (function() {
+            const theme = localStorage.getItem('theme');
+            if (theme === 'light') {
+                document.documentElement.classList.remove('dark');
+            } else {
+                document.documentElement.classList.add('dark');
+            }
+        })();
+    </script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
     <link rel="stylesheet" href="../css/styles.css">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
 </head>
-<body class="dark">
+<body>
     <div class="dashboard-container">
         <!-- Sidebar -->
         <aside class="sidebar">
@@ -25,7 +36,7 @@
                     <li><a href="index.html"><i class="fas fa-tachometer-alt"></i> <span>Painel</span></a></li>
                     <li><a href="company-dashboard.html"><i class="fas fa-users"></i> <span>Membros</span></a></li>
                     <li><a href="reports.html" class="active"><i class="fas fa-chart-pie"></i> <span>Relatórios</span></a></li>
-                    <li class="sidebar-logout-item"><a href="landing.html"><i class="fas fa-sign-out-alt"></i> <span>Sair</span></a></li>
+                    <li class="sidebar-logout-item"><a href="#"><i class="fas fa-sign-out-alt"></i> <span>Sair</span></a></li>
                 </ul>
             </nav>
         </aside>
@@ -89,6 +100,12 @@
         </div>
     </div>
 
-    <script type="module" src="../js/reports.js"></script>
+    <script type="module">
+        import { protectPage } from '../js/auth-guard.js';
+        import { initReportsPage } from '../js/reports.js';
+
+        protectPage(); // Protege a página
+        initReportsPage(); // Inicializa o conteúdo da página
+    </script>
 </body>
 </html>

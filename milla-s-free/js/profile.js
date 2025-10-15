@@ -1,247 +1,146 @@
 import firebaseConfig from './FireBase.js';
 import { initThemeManager } from './theme-manager.js';
-import { showMessageModal, formatDuration, updateChart } from './ui-helpers.js';
 import { Timer } from './timer.js';
+import { formatDuration } from './ui-helpers.js';
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
 import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-import { getFirestore, doc, getDoc, collection, query, where, addDoc, onSnapshot, orderBy, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { getFirestore, doc, getDoc, addDoc, collection, query, where, onSnapshot, orderBy } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-// Variáveis globais
-let app, db;
-let memberProfile = null;
-let chartInstance = null;
-let allProjects = {};
-let allTasks = []; // Armazena a lista completa de tarefas
-
+let app, auth, db;
+let memberId, companyId;
 let timer;
 
-let memberNameDisplay, logoutButton, timerDisplay, startButton, stopButton, resetButton,
-    projectInput, timeEntriesList, messageModal, messageText, messageOkButton,
-    taskSelectionModal, existingTasksList, newTaskInput, startTimerConfirmButton,
-    cancelTaskSelectionButton;
-
 function initUIElements() {
-    memberNameDisplay = document.getElementById('member-name-display');
-    logoutButton = document.getElementById('logout-button');
-    timerDisplay = document.getElementById('timer-display');
-    startButton = document.getElementById('start-button');
-    stopButton = document.getElementById('stop-button');
-    resetButton = document.getElementById('reset-button');
-    projectInput = document.getElementById('project-input');
-    timeEntriesList = document.getElementById('time-entries-list');
-    messageModal = document.getElementById('message-modal');
-    messageText = document.getElementById('message-text');
-    messageOkButton = document.getElementById('message-ok');
-    taskSelectionModal = document.getElementById('task-selection-modal');
-    existingTasksList = document.getElementById('existing-tasks-list');
-    newTaskInput = document.getElementById('new-task-input');
-    startTimerConfirmButton = document.getElementById('start-timer-confirm-button');
-    cancelTaskSelectionButton = document.getElementById('cancel-task-selection-button');
+    const logoutButton = document.getElementById('logout-button');
+    logoutButton.addEventListener('click', async () => {
+        try {
+            await signOut(auth);
+            window.location.href = 'member-login.html';
+        } catch (error) {
+            console.error("Erro ao fazer logout:", error);
+        }
+    });
 }
 
-// Lógica de Autenticação e Inicialização
-async function initializeProfilePage() {
+async function initializeFirebase() {
     try {
         app = initializeApp(firebaseConfig);
+        auth = getAuth(app);
         db = getFirestore(app);
-        const auth = getAuth(app);
 
         onAuthStateChanged(auth, async (user) => {
             if (user) {
-                // O colaborador está logado via custom token. O UID dele é o ID do documento 'member'.
-                const memberId = user.uid;
+                // O UID do usuário logado com custom token é o ID do membro no Firestore
+                memberId = user.uid;
+                console.log("Colaborador autenticado:", memberId);
+
+                // Buscar dados do membro para obter o companyId e o nome
                 const memberDocRef = doc(db, "members", memberId);
                 const memberDocSnap = await getDoc(memberDocRef);
 
                 if (memberDocSnap.exists()) {
-                    memberProfile = { id: memberDocSnap.id, ...memberDocSnap.data() };
+                    const memberData = memberDocSnap.data();
+                    companyId = memberData.companyId;
+                    document.getElementById('member-name-display').textContent = memberData.name;
 
-                    // Atualiza UI com dados do colaborador
+                    // Inicializar funcionalidades da página
+                    setupTimeEntriesListener();
+                    setupTasksListener();
                     timer = new Timer(
                         document.getElementById('timer-display'),
                         document.getElementById('start-button'),
                         document.getElementById('stop-button'),
-                        document.getElementById('reset-button'),
                         document.getElementById('project-input'),
-                        saveTimeEntry);
-                    memberNameDisplay.textContent = `Olá, ${memberProfile.name}`;
-                    projectInput.disabled = false;
-                    startButton.disabled = false;
-                    stopButton.disabled = true;
-                    resetButton.disabled = true;
-
-                    // Configura listeners
-                    setupDataListeners();
-                    setupTasksListener(memberProfile.companyId);
+                        document.getElementById('project-input'),
+                        saveTimeEntry
+                    );
                 } else {
-                    showMessageModal("Seu perfil de colaborador não foi encontrado.");
+                    console.error("Documento do membro não encontrado!");
                     await signOut(auth);
                 }
             } else {
-                // Se não há usuário, redireciona para a tela de login de colaborador
-                window.location.href = '../html/member-login.html';
+                // Se não houver usuário, redireciona para a página de login do membro
+                console.log("Nenhum colaborador logado. Redirecionando...");
+                window.location.href = 'member-login.html';
             }
         });
-
     } catch (error) {
-        console.error("Erro ao inicializar a página de perfil:", error);
-        showMessageModal("Ocorreu um erro ao carregar seu perfil.");
-    }
-}
-
-async function openTaskSelectionModal() {
-    if (timer && timer.isRunning) return;
-    populateTaskSelectionModal(allTasks);
-    taskSelectionModal.classList.remove('hidden');
-}
-
-function populateTaskSelectionModal(tasks) {
-    existingTasksList.innerHTML = '';
-    newTaskInput.value = ''; // Limpa o campo de nova tarefa
-    if (tasks.length === 0) {
-        const p = document.createElement('p');
-        p.className = 'p-3 text-center text-sm text-gray-500';
-        p.textContent = 'Nenhuma tarefa pré-definida.';
-        existingTasksList.innerHTML = '';
-        existingTasksList.appendChild(p);
-    } else {
-        tasks.forEach(task => {
-            const taskElement = document.createElement('div');
-            taskElement.className = 'p-3 text-left cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md';
-            taskElement.textContent = task.name;
-            taskElement.dataset.taskName = task.name;
-            existingTasksList.appendChild(taskElement);
-        });
+        console.error("Erro na inicialização do Firebase:", error);
     }
 }
 
 async function saveTimeEntry(projectName, duration) {
-    if (!db || !memberProfile) return;
-
+    if (!db || !memberId || !companyId) {
+        console.error("Dados de autenticação incompletos para salvar entrada de tempo.");
+        return;
+    }
     const durationInSeconds = Math.floor(duration / 1000);
     try {
         await addDoc(collection(db, "timeEntries"), {
-            memberId: memberProfile.id,
-            companyId: memberProfile.companyId,
             projectName: projectName,
             duration: durationInSeconds,
-            status: 'pending', // Tarefas de colaboradores agora são sempre 'pending' para aprovação
             timestamp: new Date(),
+            companyId: companyId,
+            memberId: memberId,
+            status: 'pending' // Entradas de colaboradores sempre começam como pendentes
         });
+        console.log("Entrada de tempo enviada para aprovação.");
     } catch (e) {
-        console.error("Erro ao salvar entrada de tempo: ", e);
-        showMessageModal("Erro ao salvar a entrada de tempo.");
+        console.error("Erro ao adicionar documento: ", e);
     }
 }
 
-function renderTimeEntries(entries) {
-    timeEntriesList.innerHTML = '';
-    if (entries.length === 0) {
-        const p = document.createElement('p');
-        p.className = 'text-center text-gray-500';
-        p.textContent = 'Nenhuma entrada de tempo encontrada.';
-        timeEntriesList.appendChild(p);
-        return;
-    }
-    entries.forEach(entry => {
-        const entryElement = document.createElement('div');
-        entryElement.className = 'p-4 bg-white dark:bg-gray-800 rounded-lg shadow-sm';
-        const projectP = document.createElement('p');
-        projectP.className = 'font-bold';
-        projectP.textContent = entry.projectName;
-        const detailsP = document.createElement('p');
-        detailsP.className = 'text-sm text-gray-500 dark:text-gray-400';
-        detailsP.textContent = `${new Date(entry.timestamp.seconds * 1000).toLocaleDateString()} - Duração: ${formatDuration(entry.duration)}`;
-        entryElement.append(projectP, detailsP);
-        timeEntriesList.appendChild(entryElement);
-    });
-}
-
-// Listeners do Firestore (adaptados)
-function setupDataListeners() {
-    if (!db || !memberProfile) return;
-
-    // Este único listener agora alimenta tanto a lista de entradas quanto o gráfico.
-    const q = query(
-        collection(db, "timeEntries"),
-        where("memberId", "==", memberProfile.id),
-        orderBy("timestamp", "desc")
-    );
+function setupTimeEntriesListener() {
+    const timeEntriesTbody = document.getElementById('time-entries-tbody');
+    const q = query(collection(db, "timeEntries"), where("memberId", "==", memberId), orderBy("timestamp", "desc"));
 
     onSnapshot(q, (snapshot) => {
-        let entries = [];
-        allProjects = {};
+        timeEntriesTbody.innerHTML = '';
+        if (snapshot.empty) {
+            timeEntriesTbody.innerHTML = `<tr><td colspan="4" class="text-center p-4 text-secondary">Nenhuma hora registrada ainda.</td></tr>`;
+            return;
+        }
         snapshot.forEach(doc => {
-            const entry = { id: doc.id, ...doc.data() };
-            entries.push(entry);
+            const entry = doc.data();
+            const statusInfo = {
+                approved: { text: 'Aprovado', class: 'status-approved' },
+                pending: { text: 'Pendente', class: 'status-pending' },
+                rejected: { text: 'Rejeitado', class: 'status-rejected' }
+            };
+            const currentStatus = statusInfo[entry.status] || { text: entry.status, class: '' };
 
-            // Atualiza os dados do gráfico simultaneamente
-            if (allProjects[entry.projectName]) {
-                allProjects[entry.projectName] += entry.duration;
-            } else {
-                allProjects[entry.projectName] = entry.duration;
-            }
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td>${entry.projectName}</td>
+                <td>${new Date(entry.timestamp.seconds * 1000).toLocaleDateString()}</td>
+                <td>${formatDuration(entry.duration)}</td>
+                <td><span class="status-badge ${currentStatus.class}">${currentStatus.text}</span></td>
+            `;
+            timeEntriesTbody.appendChild(row);
         });
-        renderTimeEntries(entries);
-        chartInstance = updateChart(chartInstance, allProjects);
     });
 }
 
-function setupTasksListener(companyId) {
-    if (!db) return;
+function setupTasksListener() {
+    if (!db || !companyId) return;
 
     const q = query(collection(db, "tasks"), where("companyId", "==", companyId), orderBy("name"));
     onSnapshot(q, (snapshot) => {
-        allTasks = [];
+        const tasksDatalist = document.getElementById('tasks-datalist');
+        if (tasksDatalist) tasksDatalist.innerHTML = '';
         snapshot.forEach(doc => {
-            allTasks.push({ id: doc.id, ...doc.data() });
+            const task = doc.data();
+            if (tasksDatalist) {
+                const option = document.createElement('option');
+                option.value = task.name;
+                tasksDatalist.appendChild(option);
+            }
         });
     });
 }
 
-// Iniciar a página
 document.addEventListener('DOMContentLoaded', () => {
     initUIElements();
-    initializeProfilePage();
-    initThemeManager('theme-toggle', () => chartInstance = updateChart(chartInstance, allProjects));
-
-    if (messageOkButton) messageOkButton.addEventListener('click', () => messageModal.classList.add('hidden'));
-
-    if (logoutButton) {
-        logoutButton.addEventListener('click', async () => {
-            const auth = getAuth(app);
-            await signOut(auth);
-            // O listener onAuthStateChanged irá redirecionar automaticamente.
-        });
-    }
-
-    if (startButton) {
-        startButton.addEventListener('click', openTaskSelectionModal);
-    }
-
-    if (cancelTaskSelectionButton) {
-        cancelTaskSelectionButton.addEventListener('click', () => {
-            taskSelectionModal.classList.add('hidden');
-        });
-    }
-
-    if (existingTasksList) {
-        existingTasksList.addEventListener('click', (e) => {
-            if (e.target && e.target.dataset.taskName) {
-                newTaskInput.value = e.target.dataset.taskName;
-            }
-        });
-    }
-
-    if (startTimerConfirmButton) {
-        startTimerConfirmButton.addEventListener('click', () => {
-            const selectedTask = newTaskInput.value.trim();
-            if (selectedTask === "") {
-                showMessageModal("Por favor, selecione ou digite uma tarefa.");
-                return;
-            }
-            taskSelectionModal.classList.add('hidden');
-            timer.start(selectedTask);
-        });
-    }
+    initializeFirebase();
+    initThemeManager('theme-toggle');
 });

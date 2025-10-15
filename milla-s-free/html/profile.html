@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Meu Painel - Milla's Free</title>
+    <link rel="icon" href="../imagens/milasclock.png" type="image/png" sizes="any">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = { darkMode: 'class' }
+    </script>
+    <script>
+        // Previne o "flash" do tema incorreto (FOUC)
+        (function() {
+            const theme = localStorage.getItem('theme');
+            if (theme === 'light') {
+                document.documentElement.classList.remove('dark');
+            } else {
+                document.documentElement.classList.add('dark');
+            }
+        })();
+    </script>
+    <link rel="stylesheet" href="../css/styles.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
+</head>
+<body>
+    <div class="dashboard-container">
+        <!-- Sidebar Simplificada para Colaborador -->
+        <aside class="sidebar">
+            <a href="landing.html" class="sidebar-header"><img src="../imagens/millasfull.png" alt="Milla's Free Logo" class="sidebar-logo"></a>
+            <nav class="sidebar-nav">
+                <ul>
+                    <li><a href="profile.html" class="active"><i class="fas fa-user-clock"></i> <span>Meu Painel</span></a></li>
+                    <li class="sidebar-logout-item"><a href="#" id="logout-button"><i class="fas fa-sign-out-alt"></i> <span>Sair</span></a></li>
+                </ul>
+            </nav>
+        </aside>
+
+        <!-- Conteúdo Principal -->
+        <div class="main-content">
+            <header class="main-header">
+                <div class="header-actions">
+                    <button id="theme-toggle" aria-label="Alternar tema" class="theme-toggle-btn"><i class="fas fa-sun"></i></button>
+                    <div class="flex items-center gap-2">
+                        <div id="member-name-display" class="font-semibold">Carregando...</div>
+                        <div class="profile-pic"></div>
+                    </div>
+                </div>
+            </header>
+
+            <main>
+                <h1 class="text-2xl font-bold mb-6">Meu Painel de Horas</h1>
+
+                <!-- Time Tracking Section -->
+                <div class="card time-tracker-card mb-8">
+                    <div class="flex flex-col items-center gap-6">
+                        <div class="w-full max-w-xl text-center">
+                            <label for="project-input" class="text-sm font-semibold mb-2 block opacity-80">O QUE VOCÊ ESTÁ FAZENDO?</label>
+                            <input id="project-input" type="text" list="tasks-datalist" placeholder="Ex: Correção de bug na API" class="w-full text-center text-xl p-3" autocomplete="off">
+                            <datalist id="tasks-datalist"></datalist>
+                        </div>
+                        <div class="flex items-center gap-8">
+                            <div id="timer-display" class="text-5xl font-mono">00:00:00</div>
+                            <div class="flex space-x-2">
+                                <button id="start-button" class="btn btn-success w-32 justify-center"><i class="fas fa-play mr-2"></i> Iniciar</button>
+                                <button id="stop-button" class="btn btn-danger w-32 justify-center" disabled><i class="fas fa-stop mr-2"></i> Parar</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Time Entries List -->
+                <div class="card">
+                    <h2 class="text-xl font-semibold mb-4">Minhas Entradas de Tempo</h2>
+                    <div class="data-table-container">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Projeto</th>
+                                    <th>Data</th>
+                                    <th>Duração</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody id="time-entries-tbody">
+                                <!-- Rows will be injected by JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <script type="module" src="../js/profile.js"></script>
+</body>
+</html>

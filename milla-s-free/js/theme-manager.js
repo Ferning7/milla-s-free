@@ -9,7 +9,8 @@ const THEME_STORAGE_KEY = 'theme';
  */
 function updateThemeIcon(iconElement) {
     if (!iconElement) return;
-    if (document.body.classList.contains('dark')) {
+    // Verifica a classe no elemento <html>
+    if (document.documentElement.classList.contains('dark')) {
         iconElement.classList.remove('fa-moon');
         iconElement.classList.add('fa-sun');
     } else {
@@ -23,22 +24,24 @@ function updateThemeIcon(iconElement) {
  * e aplica a mudança ao documento.
  */
 function toggleTheme() {
-    const isDark = document.body.classList.toggle('dark');
+    // Alterna a classe no elemento <html>
+    const isDark = document.documentElement.classList.toggle('dark');
     const newTheme = isDark ? 'dark' : 'light';
     localStorage.setItem(THEME_STORAGE_KEY, newTheme);
     return newTheme;
 }
 
 /**
- * Aplica o tema salvo no localStorage ou define o tema escuro como padrão.
+ * Aplica o tema salvo no localStorage.
+ * Esta função é chamada por um script inline no <head> para evitar FOUC.
  */
 function applyInitialTheme() {
     const savedTheme = localStorage.getItem(THEME_STORAGE_KEY);
-    // Define 'dark' como padrão se nenhum tema estiver salvo
+    // O padrão é 'dark' se nada estiver salvo ou se for explicitamente 'dark'
     if (savedTheme === 'light') {
-        document.body.classList.remove('dark');
+        document.documentElement.classList.remove('dark');
     } else {
-        document.body.classList.add('dark');
+        document.documentElement.classList.add('dark');
     }
 }
 
@@ -49,7 +52,8 @@ function applyInitialTheme() {
  * @param {function} [onThemeChange] - Callback opcional a ser executado após a mudança de tema.
  */
 function initThemeManager(toggleButtonId, onThemeChange) {
-    applyInitialTheme();
+    // A aplicação inicial do tema agora é feita por um script inline no <head>
+    // para evitar o "flash" de tema.
 
     const themeToggleButton = document.getElementById(toggleButtonId);
     if (themeToggleButton) {
