@@ -1,8 +1,8 @@
-import { auth, db } from './firebase-services.js';
-import { initThemeManager } from './theme-manager.js';
+import { initializeApp } from './app.js';
+import { db } from './firebase-services.js';
 import { showMessageModal, formatDuration, updateChart, toggleButtonLoading } from './ui-helpers.js';
 import { Timer } from './timer.js';
-import { onAuthStateChanged, signOut, sendPasswordResetEmail, sendEmailVerification } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+import { sendPasswordResetEmail, sendEmailVerification } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 import { doc, getDoc, addDoc, setDoc, updateDoc, deleteDoc, onSnapshot, collection, query, where, orderBy, limit, startAfter, endBefore, getDocs, setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 setLogLevel('warn');
@@ -22,8 +22,7 @@ let membersMap = new Map();
 
 let timerDisplay, startButton, stopButton, projectInput, timeEntriesTbody, statTotalHours, statActiveProjects, statTeamMembers, statPendingEntries,
     prevPageButton, nextPageButton, paginationControls, editModal, editEntryIdInput,
-    editProjectInput, editDateInput, editHoursInput, editMinutesInput, editSecondsInput, saveEditButton, cancelEditButton,
-    profileToggle, profileModal, userEmailDisplay, logoutButton, shareToggle, shareModal, appIdDisplay,
+    editProjectInput, editDateInput, editHoursInput, editMinutesInput, editSecondsInput, saveEditButton, cancelEditButton, shareToggle, shareModal, appIdDisplay,
     copyAppIdButton, closeShareModalButton, menuToggleMain, messageModal, messageText, messageOkButton, messageCancelButton, forgotPasswordLink,
     forgotPasswordModal, forgotPasswordForm, forgotEmailInput, cancelForgotButton,
     taskSelectionModal, existingTasksList, newTaskInput, startTimerConfirmButton,
@@ -51,10 +50,6 @@ function initUIElements() {
     editSecondsInput = document.getElementById('edit-seconds');
     saveEditButton = document.getElementById('save-edit-button');
     cancelEditButton = document.getElementById('cancel-edit-button'); 
-    profileToggle = document.getElementById('profile-toggle');
-    profileModal = document.getElementById('profile-modal');
-    userEmailDisplay = document.getElementById('user-email-display');
-    logoutButton = document.getElementById('logout-button');
     shareToggle = document.getElementById('share-toggle');
     shareModal = document.getElementById('share-modal');
     appIdDisplay = document.getElementById('app-id-display');
@@ -77,63 +72,32 @@ function initUIElements() {
     memberFilter = document.getElementById('member-filter');
 }
 
-async function initializeFirebase() {
-    try {
-        onAuthStateChanged(auth, async (user) => {
-                if (user) {
-                    userId = user.uid;
-                    console.log("Usuário autenticado:", userId); 
-                    document.getElementById('dashboard-content').classList.remove('hidden'); // Mostra o painel
+function initDashboardPage(user) {
+    userId = user.uid;
+    console.log("Painel de Controle inicializado para:", userId);
+    document.getElementById('dashboard-content').classList.remove('hidden');
 
-                    projectInput.disabled = false;
-                    fetchTimeEntriesPage('first'); // Carrega a primeira página em vez de tudo
-                    setupMembersListener();
-                    setupRealtimeChart();
-                    setupTasksListener();
-                    updateVerificationStatus(user);
-                    timer = new Timer(
-                        document.getElementById('timer-display'),
-                        document.getElementById('start-button'),
-                        document.getElementById('stop-button'),
-                        document.getElementById('project-input'),
-                        document.getElementById('project-input'),
-                        saveTimeEntry);
-                } else {
-                    userId = null;
-                    console.log("Nenhum usuário logado.");
-                    // Se não houver usuário, redireciona para a landing page para fazer login
-                    window.location.href = 'landing.html';
-                }
-        });
-    } catch (error) {
-        console.error("Erro na inicialização do Firebase:", error);
-        showMessageModal("Ocorreu um erro ao inicializar o aplicativo. Por favor, tente novamente.");
-    }
-}
-
-document.addEventListener('DOMContentLoaded', () => {
     initUIElements();
-    initializeFirebase();
-    initThemeManager('theme-toggle');
-    
-    // Lógica do Modal de Perfil
-    if (profileToggle) {
-        profileToggle.addEventListener('click', (e) => {
-            e.stopPropagation();
-            profileModal.classList.toggle('hidden');
-        });
-    }
-    document.addEventListener('click', (e) => {
-        if (profileModal && !profileModal.classList.contains('hidden') && !profileModal.contains(e.target) && !profileToggle.contains(e.target)) {
-            profileModal.classList.add('hidden');
-        }
-    });
 
+    projectInput.disabled = false;
+    fetchTimeEntriesPage('first');
+    setupMembersListener();
+    setupRealtimeChart();
+    setupTasksListener();
+    updateVerificationStatus(user);
+
+    timer = new Timer(
+        document.getElementById('timer-display'),
+        document.getElementById('start-button'),
+        document.getElementById('stop-button'),
+        document.getElementById('project-input'),
+        saveTimeEntry
+    );
 
     if (startButton) startButton.addEventListener('click', handleStartTimer);
     if (saveEditButton) saveEditButton.addEventListener('click', saveEditedEntry);
     if (cancelEditButton) cancelEditButton.addEventListener('click', () => editModal.classList.add('hidden'));
-
+    
     if (timeEntriesTbody) {
         timeEntriesTbody.addEventListener('click', async (e) => {
             const button = e.target.closest('button');
@@ -211,19 +175,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 showMessageModal("Se o e-mail estiver correto e cadastrado, um link de redefinição será enviado.");
             }
         });
-    }
-
-    // Logout em todas as páginas
-    if (logoutButton) {
-        logoutButton.addEventListener('click', async (e) => {
-        e.preventDefault();
-        try {
-            await signOut(auth);
-            window.location.href = 'landing.html';
-        } catch (error) {
-            console.error("Erro ao fazer logout:", error);
-        }
-    });}
+    }    
 
     if (prevPageButton) {
         prevPageButton.addEventListener('click', () => {
@@ -236,12 +188,12 @@ document.addEventListener('DOMContentLoaded', () => {
             fetchTimeEntriesPage('next');
         });
     }
-}); 
+}
+
+initializeApp(initDashboardPage);
 
 function updateVerificationStatus(user) {
-    const verificationStatusEl = document.getElementById('verification-status');
-    if (userEmailDisplay) userEmailDisplay.textContent = user.email;
-
+    const verificationStatusEl = document.getElementById('verification-status');    
 
     if (!verificationStatusEl) return;
 
@@ -270,7 +222,7 @@ function updateVerificationStatus(user) {
 
         resendButton.addEventListener('click', async () => {
             try {
-                await sendEmailVerification(auth.currentUser);
+                await sendEmailVerification(user);
                 showMessageModal("Um novo e-mail de verificação foi enviado.");
             } catch (error) {
                 console.error("Erro ao reenviar email de verificação:", error);

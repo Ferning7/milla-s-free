@@ -1,13 +1,13 @@
-import { auth, db } from './firebase-services.js';
-import { initThemeManager } from './theme-manager.js';
+import { initializeApp } from './app.js';
+import { db } from './firebase-services.js';
 import { showMessageModal, formatDuration } from './ui-helpers.js';
-import { onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 import { collection, query, where, onSnapshot, orderBy, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // Chart instances
 let hoursByProjectChart, hoursByMemberChart, hoursTrendChart;
 let allTimeEntries = [];
 let membersMap = new Map();
+let userId;
 
 // --- CHART RENDERING FUNCTIONS ---
 
@@ -173,54 +173,10 @@ async function fetchData(startDate, endDate) {
 
 // --- INITIALIZATION ---
 
-export function initReportsPage() {
-    onAuthStateChanged(auth, async (user) => {
-        if (user) {
-            userId = user.uid;
-            // First, fetch members to map IDs to names
-            const membersQuery = query(collection(db, "members"), where("companyId", "==", userId));
-            const membersSnapshot = await getDocs(membersQuery);
-            membersSnapshot.forEach(doc => membersMap.set(doc.id, doc.data().name));
+function initReportsPage(user) {
+    userId = user.uid;
+    console.log("Página de Relatórios inicializada para:", userId);
 
-            // Then, fetch data for the charts
-            const thirtyDaysAgo = new Date();
-            thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-            fetchData(thirtyDaysAgo, new Date()); // Load last 30 days by default
-        } else {
-            window.location.href = 'index.html';
-        }
-    });
-}
-
-document.addEventListener('DOMContentLoaded', () => {
-    // Profile modal logic
-    const profileToggle = document.getElementById('profile-toggle');
-    const profileModal = document.getElementById('profile-modal');
-    const userEmailDisplay = document.getElementById('user-email-display');
-    const logoutButton = document.getElementById('logout-button');
-
-    if (profileToggle) {
-        profileToggle.addEventListener('click', (e) => {
-            const pageOverlay = document.getElementById('page-overlay');
-            e.stopPropagation();
-            if (auth.currentUser) {
-                userEmailDisplay.textContent = auth.currentUser.email;
-            }
-            profileModal.classList.toggle('hidden');
-            if (pageOverlay) pageOverlay.classList.toggle('hidden');
-        });
-    }
-    if (logoutButton) {
-        logoutButton.addEventListener('click', () => signOut(auth));
-    }
-    document.addEventListener('click', (e) => {
-        const pageOverlay = document.getElementById('page-overlay');
-        if (profileModal && !profileModal.classList.contains('hidden') && !profileModal.contains(e.target) && !profileToggle.contains(e.target)) {
-            profileModal.classList.add('hidden');
-            if (pageOverlay) pageOverlay.classList.add('hidden');
-        }
-    });
-    
     // Date picker
     flatpickr("#date-range-picker", {
         mode: "range",
@@ -242,4 +198,20 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
     });
-});
+
+    // Primeiro, busca os membros para mapear IDs para nomes
+    const membersQuery = query(collection(db, "members"), where("companyId", "==", userId));
+    getDocs(membersQuery).then(membersSnapshot => {
+        membersSnapshot.forEach(doc => membersMap.set(doc.id, doc.data().name));
+
+        // Em seguida, busca os dados para os gráficos
+        const thirtyDaysAgo = new Date();
+        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+        fetchData(thirtyDaysAgo, new Date()); // Carrega os últimos 30 dias por padrão
+    });
+
+    // Recarrega os gráficos quando o tema muda
+    document.getElementById('theme-toggle').addEventListener('click', () => processDataForCharts(allTimeEntries));
+}
+
+initializeApp(initReportsPage);

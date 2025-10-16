@@ -148,8 +148,4 @@ function setupTasksListener() {
     });
 }
 
-document.addEventListener('DOMContentLoaded', () => {
-    initUIElements();
-    initializeFirebase();
-    initThemeManager('theme-toggle');
-});
+initializeApp(initProfilePage);

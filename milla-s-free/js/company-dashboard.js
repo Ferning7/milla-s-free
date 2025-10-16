@@ -1,7 +1,6 @@
-import { auth, db, functions } from './firebase-services.js';
-import { initThemeManager } from './theme-manager.js';
+import { initializeApp } from './app.js';
+import { db, functions } from './firebase-services.js';
 import { showMessageModal, toggleButtonLoading } from './ui-helpers.js';
-import { onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js';
 import { collection, query, where, onSnapshot, doc, deleteDoc, setLogLevel, updateDoc, orderBy, httpsCallable, addDoc } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js';
 
 setLogLevel('warn');
@@ -15,7 +14,7 @@ const membersPageSize = 5;
 let companyEmailDisplay, addMemberButton, membersList, createMemberModal, createMemberForm, cancelCreateMemberButton,
     editMemberModal, editMemberForm, cancelEditMemberButton, saveEditMemberButton, editMemberIdInput, editMemberNameInput,
     editMemberEmailInput, searchMemberInput, membersPaginationControls, prevMembersPageButton, nextMembersPageButton,
-    profileToggle, profileModal, userEmailDisplay, logoutButton, addTaskForm, newTaskNameInput, tasksList, editTaskModal, editTaskForm, cancelEditTaskButton, saveEditTaskButton,
+    addTaskForm, newTaskNameInput, tasksList, editTaskModal, editTaskForm, cancelEditTaskButton, saveEditTaskButton,
     editTaskIdInput, editTaskNameInput;
  
 function initUIElements() {
@@ -32,10 +31,6 @@ function initUIElements() {
     editMemberIdInput = document.getElementById('edit-member-id');
     editMemberNameInput = document.getElementById('edit-member-name');
     editMemberEmailInput = document.getElementById('edit-member-email');
-    profileToggle = document.getElementById('profile-toggle');
-    profileModal = document.getElementById('profile-modal');
-    userEmailDisplay = document.getElementById('user-email-display');
-    logoutButton = document.getElementById('logout-button');
     searchMemberInput = document.getElementById('search-member-input');
     membersPaginationControls = document.getElementById('members-pagination-controls');
     prevMembersPageButton = document.getElementById('prev-members-page-button');
@@ -49,19 +44,6 @@ function initUIElements() {
     saveEditTaskButton = document.getElementById('save-edit-task-button');
     editTaskIdInput = document.getElementById('edit-task-id');
     editTaskNameInput = document.getElementById('edit-task-name');
-}
-
-async function initializeDashboard() {
-    onAuthStateChanged(auth, (user) => {
-        if (user) {
-            userId = user.uid;
-            if (userEmailDisplay) userEmailDisplay.textContent = user.email;
-            setupMembersListener();
-            setupTasksListener();
-        } else {
-            window.location.href = 'landing.html';
-        }
-    });
 }
 
 function createTaskHTML(task) {
@@ -224,38 +206,13 @@ function setupTasksListener() {
     });
 }
 
-document.addEventListener('DOMContentLoaded', () => {
+function initCompanyDashboardPage(user) {
+    userId = user.uid;
+    console.log("Dashboard da Empresa inicializado para:", userId);
+
     initUIElements();
-    initializeDashboard();
-    initThemeManager('theme-toggle');
-
-    if (profileToggle) {
-        profileToggle.addEventListener('click', (e) => {
-            const pageOverlay = document.getElementById('page-overlay');
-            e.stopPropagation();
-            if (auth.currentUser && userEmailDisplay) userEmailDisplay.textContent = auth.currentUser.email;
-            profileModal.classList.toggle('hidden');
-            if (pageOverlay) pageOverlay.classList.toggle('hidden');
-        });
-    }
-
-    // Listener para fechar o modal de perfil ao clicar fora
-    document.addEventListener('click', (e) => {
-        if (profileModal && !profileModal.classList.contains('hidden') && !profileModal.contains(e.target) && !profileToggle.contains(e.target)) {
-            profileModal.classList.add('hidden');
-        }
-    });
-
-    if (logoutButton) {
-        logoutButton.addEventListener('click', async () => {
-            try {
-                await signOut(auth);
-            } catch (error) {
-                console.error("Erro ao fazer logout:", error);
-                showMessageModal("Erro ao sair. Tente novamente.");
-            }
-        });
-    }
+    setupMembersListener();
+    setupTasksListener();
 
     if (addMemberButton) addMemberButton.addEventListener('click', () => createMemberModal.classList.remove('hidden'));
     if (cancelCreateMemberButton) cancelCreateMemberButton.addEventListener('click', () => createMemberModal.classList.add('hidden'));
@@ -535,4 +492,6 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
     }
-});
+}
+
+initializeApp(initCompanyDashboardPage);

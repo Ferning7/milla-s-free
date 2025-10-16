@@ -7,7 +7,6 @@ export class Timer {
      * @param {HTMLButtonElement} startButton - O botão de iniciar.
      * @param {HTMLButtonElement} stopButton - O botão de parar.
      * @param {HTMLInputElement} projectInput - O input que mostra a tarefa atual.
-     * @param {function(string, number): Promise<void>} saveTimeEntryCallback - Callback para salvar a entrada de tempo.
      */
     constructor(timerDisplay, startButton, stopButton, projectInput, saveTimeEntryCallback) {
         this.timerDisplay = timerDisplay;
