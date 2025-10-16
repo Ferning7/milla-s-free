@@ -214,4 +214,4 @@ function initReportsPage(user) {
     document.getElementById('theme-toggle').addEventListener('click', () => processDataForCharts(allTimeEntries));
 }
 
-initializeApp(initReportsPage);
+initializeApp(initReportsPage, db);

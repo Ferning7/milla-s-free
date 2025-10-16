@@ -1,7 +1,7 @@
 import { initializeApp } from './app.js';
-import { db, functions } from './firebase-services.js';
+import { db } from './firebase-services.js';
 import { showMessageModal, toggleButtonLoading } from './ui-helpers.js';
-import { collection, query, where, onSnapshot, doc, deleteDoc, setLogLevel, updateDoc, orderBy, httpsCallable, addDoc } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js';
+import { collection, query, where, onSnapshot, doc, deleteDoc, setLogLevel, updateDoc, orderBy, addDoc } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js';
 
 setLogLevel('warn');
 
@@ -82,19 +82,10 @@ function createMemberHTML(member) {
                 <p class="font-semibold">${sanitize(member.name)}</p>
                 <p class="text-sm text-secondary">${sanitize(member.email)}</p>
             </td>
-            <td>
-                <div class="flex items-center gap-2">
-                    <input type="text" readonly value="${sanitize(member.loginToken)}" class="token-input p-1 text-xs w-48">
-                    <button class="copy-token-button btn btn-primary btn-sm" data-token="${sanitize(member.loginToken)}">Copiar</button>
-                </div>
-            </td>
             <td class="text-right">
                 <div class="flex items-center justify-end gap-2">
                     <button title="Editar Colaborador" class="edit-member-button btn-icon" data-id="${member.id}" data-name="${sanitize(member.name)}" data-email="${sanitize(member.email)}">
                         <i class="fas fa-edit"></i>
-                    </button>
-                    <button title="Gerar Novo Token" class="regenerate-token-button btn-icon" data-id="${member.id}" data-name="${sanitize(member.name || 'este colaborador')}">
-                        <i class="fas fa-sync-alt"></i>
                     </button>
                     <button title="Excluir Colaborador" class="delete-member-button btn-icon" data-id="${member.id}" data-name="${sanitize(member.name || 'este colaborador')}">
                         <i class="fas fa-trash"></i>
@@ -115,7 +106,7 @@ function renderMembers() {
     membersList.innerHTML = '';
 
     const setPlaceholder = (message) => {
-        membersList.innerHTML = `<tr><td colspan="3" class="text-center text-secondary p-4 text-sm">${message}</td></tr>`;
+        membersList.innerHTML = `<tr><td colspan="2" class="text-center text-secondary p-4 text-sm">${message}</td></tr>`;
     }
 
     if (filteredMembers.length === 0) {
@@ -151,7 +142,7 @@ function setupMembersListener() {
     // Show skeleton
     const skeletonHTML = Array(membersPageSize).fill(`
         <tr class="skeleton-row">
-            <td colspan="3" class="p-0">
+            <td colspan="2" class="p-0">
                 <div class="flex items-center justify-between p-2">
                     <div class="space-y-2"><div class="skeleton skeleton-text w-32"></div><div class="skeleton skeleton-text-sm w-48"></div></div>
                     <div class="skeleton skeleton-text w-24 h-8"></div>
@@ -172,7 +163,7 @@ function setupMembersListener() {
         renderMembers();
     }, (error) => {
         console.error("Erro ao buscar colaboradores:", error);
-        membersList.innerHTML = `<tr><td colspan="3" class="text-center text-red-500 p-4">Erro ao carregar colaboradores.</td></tr>`; // Hide skeleton on error
+        membersList.innerHTML = `<tr><td colspan="2" class="text-center text-red-500 p-4">Erro ao carregar colaboradores.</td></tr>`; // Hide skeleton on error
         showMessageModal("Ocorreu um erro ao buscar os colaboradores. Verifique se as regras de segurança do Firestore permitem a leitura da coleção 'members'.");
     });
 }
@@ -278,14 +269,19 @@ function initCompanyDashboardPage(user) {
             const memberEmail = createMemberForm['member-email'].value;
 
             try {
-                // Chama a Cloud Function para criar o membro e gerar o token de forma segura.
-                const createMemberWithToken = httpsCallable(functions, 'createMemberAndToken');
-                const result = await createMemberWithToken({ name: memberName, email: memberEmail });
+                // Lógica movida da Cloud Function para o cliente.
+                // Adiciona o novo membro diretamente ao Firestore.
+                await addDoc(collection(db, "members"), {
+                    name: memberName,
+                    email: memberEmail,
+                    companyId: userId, // O ID do gestor logado
+                    createdAt: new Date(),
+                });
 
                 createMemberModal.classList.add('hidden');
                 createMemberForm.reset();
                 // A lista será atualizada automaticamente pelo onSnapshot.
-                showMessageModal(`Colaborador "${memberName}" adicionado com sucesso!`);
+                showMessageModal(`Colaborador "${memberName}" adicionado! Ele(a) pode agora acessar o painel de colaborador usando este e-mail e definindo uma senha.`);
             } catch (error) {
                 console.error("Erro ao adicionar colaborador:", error);
                 const errorMessage = error.message || "Erro ao adicionar colaborador. Tente novamente.";
@@ -301,18 +297,6 @@ function initCompanyDashboardPage(user) {
             const button = e.target.closest('button');
             if (!button) return;
 
-            if (button.classList.contains('copy-token-button')) {
-                const token = button.dataset.token;
-                navigator.clipboard.writeText(token).then(() => {
-                    showMessageModal('Token copiado!');
-                    button.closest('tr').querySelector('.token-input')?.classList.add('token-copied-glow');
-                    setTimeout(() => button.closest('tr').querySelector('.token-input')?.classList.remove('token-copied-glow'), 1500);
-                }).catch(err => {
-                    console.error('Erro ao copiar token: ', err);
-                    showMessageModal('Não foi possível copiar o token.');
-                });
-            }
-
             if (button.classList.contains('delete-member-button')) {
                 const memberId = button.dataset.id;
                 const memberName = button.dataset.name;
@@ -321,25 +305,6 @@ function initCompanyDashboardPage(user) {
                     deleteDoc(doc(db, "members", memberId)).then(() => {
                         showMessageModal("Colaborador excluído com sucesso.");
                     }).catch(err => showMessageModal("Erro ao excluir colaborador."));
-                }
-            }
-
-            if (button.classList.contains('regenerate-token-button')) {
-                const memberId = button.dataset.id;
-                const memberName = button.dataset.name;
-                const confirmed = await showMessageModal(`Tem certeza que deseja gerar um novo token para "${memberName}"? O token antigo deixará de funcionar.`, 'confirm');
-                if (confirmed) {
-                    try {
-                        // Chama a Cloud Function para regenerar o token de forma segura.
-                        const regenerateToken = httpsCallable(functions, 'regenerateMemberToken');
-                        await regenerateToken({ memberId: memberId });
-
-                        showMessageModal(`Novo token gerado para ${memberName}. A lista será atualizada em breve.`);
-                    } catch (error) {
-                        console.error("Erro ao gerar novo token:", error);
-                        const errorMessage = error.message || "Erro ao gerar novo token. Tente novamente.";
-                        showMessageModal(errorMessage);
-                    }
                 }
             }
 
@@ -494,4 +459,4 @@ function initCompanyDashboardPage(user) {
     }
 }
 
-initializeApp(initCompanyDashboardPage);
+initializeApp(initCompanyDashboardPage, db);

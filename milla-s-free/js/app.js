@@ -57,7 +57,7 @@ function initializeGlobalUI(user) {
  * Ponto de entrada da aplicação. Verifica a autenticação e inicializa a página.
  * @param {function(Firebase.User): void} initPageSpecificScript - A função de inicialização para a página específica.
  */
-export function initializeApp(initPageSpecificScript) {
+export function initializeApp(initPageSpecificScript, ...dependencies) {
     document.addEventListener('DOMContentLoaded', () => {
         // Inicializa o tema antes de tudo
         initThemeManager('theme-toggle');
@@ -67,7 +67,7 @@ export function initializeApp(initPageSpecificScript) {
                 // Usuário está logado
                 initializeGlobalUI(user);
                 if (typeof initPageSpecificScript === 'function') {
-                    initPageSpecificScript(user);
+                    initPageSpecificScript(user, ...dependencies);
                 }
             } else {
                 // Usuário não está logado, redireciona para a landing page

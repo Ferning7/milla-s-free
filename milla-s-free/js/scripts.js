@@ -2,7 +2,7 @@ import { initializeApp } from './app.js';
 import { db } from './firebase-services.js';
 import { showMessageModal, formatDuration, updateChart, toggleButtonLoading } from './ui-helpers.js';
 import { Timer } from './timer.js';
-import { sendPasswordResetEmail, sendEmailVerification } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+import { getAuth, sendPasswordResetEmail, sendEmailVerification } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 import { doc, getDoc, addDoc, setDoc, updateDoc, deleteDoc, onSnapshot, collection, query, where, orderBy, limit, startAfter, endBefore, getDocs, setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 setLogLevel('warn');
@@ -190,7 +190,7 @@ function initDashboardPage(user) {
     }
 }
 
-initializeApp(initDashboardPage);
+initializeApp(initDashboardPage, getAuth());
 
 function updateVerificationStatus(user) {
     const verificationStatusEl = document.getElementById('verification-status');    

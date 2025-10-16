@@ -148,4 +148,4 @@ function setupTasksListener() {
     });
 }
 
-initializeApp(initProfilePage);
+initializeApp(initProfilePage, db);
