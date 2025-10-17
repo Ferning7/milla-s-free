@@ -9,15 +9,29 @@
     <script>
         tailwind.config = { darkMode: 'class' }
     </script>
+    <script>
+        // Previne o "flash" do tema incorreto (FOUC)
+        (function() {
+            const theme = localStorage.getItem('theme');
+            if (theme === 'light') {
+                document.documentElement.classList.remove('dark');
+            } else {
+                document.documentElement.classList.add('dark');
+            }
+        })();
+    </script>
     <link rel="stylesheet" href="../css/styles.css">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
 </head>
-<body>
+<body class="bg-main text-primary">
 
     <div class="dashboard-container">
         <!-- Sidebar -->
         <aside class="sidebar">
-            <a href="landing.html" class="sidebar-header"><img src="../imagens/millasfull.png" alt="Milla's Free Logo" class="sidebar-logo"></a>
+            <a href="landing.html" class="sidebar-header">
+                <img src="../imagens/millasfull.png" alt="Milla's Free Logo" class="sidebar-logo block dark:hidden">
+                <img src="../imagens/millas_escuro.png" alt="Milla's Free Logo" class="sidebar-logo-dark hidden dark:block">
+            </a>
             <nav class="sidebar-nav">
                 <ul>
                     <li><a href="index.html"><i class="fas fa-tachometer-alt"></i> <span>Painel</span></a></li>

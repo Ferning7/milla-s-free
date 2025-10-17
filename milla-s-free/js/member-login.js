@@ -43,9 +43,9 @@ document.addEventListener('DOMContentLoaded', () => {
         } catch (error) {
             console.error("Erro no login do colaborador:", error);
             if (error.code === 'auth/invalid-credential') {
-                showMessageModal("E-mail ou senha incorretos. Se for seu primeiro acesso, clique em 'Esqueci minha senha' para definir uma.");
+                showMessageModal("E-mail ou senha incorretos. Verifique os dados ou, se for seu primeiro acesso, clique em 'Esqueci minha senha' para criar uma.");
             } else {
-                showMessageModal("Ocorreu um erro ao tentar fazer login. Tente novamente.");
+                showMessageModal("Ocorreu um erro ao tentar fazer login. Verifique sua conexão e tente novamente.");
             }
         } finally {
             submitButton.disabled = false;
@@ -61,7 +61,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         try {
             await sendPasswordResetEmail(auth, email);
-            showMessageModal("Se o seu e-mail estiver cadastrado, um link para criar/redefinir sua senha foi enviado.");
+            showMessageModal("Se o seu e-mail estiver cadastrado, um link para criar (primeiro acesso) ou redefinir sua senha foi enviado.");
         } catch (error) {
             console.error("Erro ao enviar e-mail de redefinição:", error);
             showMessageModal("Ocorreu um erro. Verifique o e-mail digitado e tente novamente.");

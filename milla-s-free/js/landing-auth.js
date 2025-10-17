@@ -1,6 +1,6 @@
 import { auth } from './firebase-services.js';
 import { showMessageModal } from './ui-helpers.js';
-import { signInWithEmailAndPassword, setPersistence, browserSessionPersistence, browserLocalPersistence } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+import { signInWithEmailAndPassword, setPersistence, browserSessionPersistence, browserLocalPersistence, sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 
 export function initLandingAuth() {
     const loginModal = document.getElementById('login-modal');
@@ -52,12 +52,10 @@ export function initLandingAuth() {
             window.location.href = 'index.html';
         } catch (error) {
             console.error("Erro no login:", error.code);
-            // Verifica se o erro é relacionado a credenciais inválidas
-            if (error.code === 'auth/invalid-credential' || error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password' || error.code === 'auth/invalid-email') {
-                loginErrorEl.textContent = "E-mail ou senha incorretos.";
+            if (error.code === 'auth/invalid-credential') {
+                loginErrorEl.textContent = "E-mail ou senha incorretos. Verifique suas credenciais.";
             } else {
-                // Para outros erros (ex: rede), mostra uma mensagem genérica
-                loginErrorEl.textContent = "Erro de conexão. Tente novamente.";
+                loginErrorEl.textContent = "Não foi possível conectar. Verifique sua internet e tente novamente.";
             }
             loginErrorEl.classList.remove('hidden');
         }
@@ -81,10 +79,20 @@ export function initLandingAuth() {
     // Adiciona um listener para o link "Esqueci minha senha" se ele existir
     const forgotPasswordLink = document.getElementById('forgot-password-link');
     if (forgotPasswordLink) {
-        forgotPasswordLink.addEventListener('click', (e) => {
+        forgotPasswordLink.addEventListener('click', async (e) => {
             e.preventDefault();
-            // A lógica de esqueci a senha pode ser um novo modal ou redirecionamento
-            showMessageModal("A funcionalidade de redefinir senha ainda será implementada.");
+            const email = loginForm['login-email'].value;
+            if (!email) {
+                showMessageModal("Por favor, digite seu e-mail no campo correspondente antes de solicitar a redefinição de senha.");
+                return;
+            }
+            try {
+                await sendPasswordResetEmail(auth, email);
+                showMessageModal("Se o seu e-mail estiver cadastrado, um link para redefinir sua senha foi enviado.");
+            } catch (error) {
+                console.error("Erro ao enviar e-mail de redefinição:", error);
+                showMessageModal("Ocorreu um erro. Verifique o e-mail digitado e tente novamente.");
+            }
         });
     }
 }

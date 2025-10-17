@@ -163,7 +163,7 @@ function setupMembersListener() {
         renderMembers();
     }, (error) => {
         console.error("Erro ao buscar colaboradores:", error);
-        membersList.innerHTML = `<tr><td colspan="2" class="text-center text-red-500 p-4">Erro ao carregar colaboradores.</td></tr>`; // Hide skeleton on error
+        membersList.innerHTML = `<tr><td colspan="2" class="text-center text-red-500 p-4">Não foi possível carregar os colaboradores.</td></tr>`; // Hide skeleton on error
         showMessageModal("Ocorreu um erro ao buscar os colaboradores. Verifique se as regras de segurança do Firestore permitem a leitura da coleção 'members'.");
     });
 }
@@ -221,13 +221,13 @@ function initCompanyDashboardPage(user) {
         addTaskForm.addEventListener('submit', async (e) => {
             e.preventDefault();
             const taskName = newTaskNameInput.value.trim();
-            if (taskName && userId) {
+            if (taskName && userId) {                
                 const isDuplicate = allTasks.some(task => task.name.toLowerCase() === taskName.toLowerCase());
                 if (isDuplicate) {
                     showMessageModal(`A tarefa "${taskName}" já existe.`);
                     return;
                 }
-
+                
                 try {
                     await addDoc(collection(db, 'tasks'), {
                         name: taskName,
@@ -236,7 +236,7 @@ function initCompanyDashboardPage(user) {
                     });
                 } catch (error) {
                     console.error("Erro ao adicionar tarefa:", error);
-                    showMessageModal("Não foi possível adicionar a tarefa.");
+                    showMessageModal("Não foi possível adicionar a tarefa. Tente novamente.");
                 } finally {
                     newTaskNameInput.value = '';
                 }
@@ -284,7 +284,7 @@ function initCompanyDashboardPage(user) {
                 showMessageModal(`Colaborador "${memberName}" adicionado! Ele(a) pode agora acessar o painel de colaborador usando este e-mail e definindo uma senha.`);
             } catch (error) {
                 console.error("Erro ao adicionar colaborador:", error);
-                const errorMessage = error.message || "Erro ao adicionar colaborador. Tente novamente.";
+                const errorMessage = "Erro ao adicionar colaborador. Verifique os dados e tente novamente.";
                 showMessageModal(errorMessage);
             } finally {
                 toggleButtonLoading(submitButton, false);

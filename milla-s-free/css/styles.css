@@ -70,11 +70,21 @@ body {
 }
 
 .sidebar-logo {
-    height: 48px; /* Altura fixa para o logo na sidebar */
-    width: auto; /* Mantém a proporção da imagem */
+    height: 50px; /* Altura do contêiner do logo */
+    width: 100%;  /* Ocupa a largura disponível */
+    object-fit: contain; /* Garante que a imagem inteira caiba no espaço */
+    object-position: left center; /* Garante que o corte comece da direita */
     margin-bottom: 0.5rem;
     display: block;
     opacity: 0.8;
+}
+
+/* Garante que o logo do tema escuro tenha o mesmo comportamento */
+.sidebar-logo-dark {
+    height: 50px;
+    width: 100%;
+    object-fit: contain;
+    object-position: left center;
 }
 
 .sidebar-header {
@@ -270,6 +280,7 @@ input[type="email"],
 input[type="password"],
 input[type="number"],
 input[type="date"],
+input[type="search"],
 select {
     background-color: var(--bg-main);
     border: 1px solid var(--border-color);
@@ -533,28 +544,28 @@ html:not(.dark) .section-bg {
     box-shadow: 0 10px 25px -5px var(--shadow-color), 0 8px 10px -6px var(--shadow-color);
 }
 
-/* --- Loading Skeleton --- */
-.skeleton {
-    animation: pulse 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite;
-    background-color: var(--border-color);
-    border-radius: 0.5rem;
-}
-
-.skeleton-text { height: 1em; }
-.skeleton-text-sm { height: 0.8em; }
-
-@keyframes pulse {
-    50% {
-        opacity: .5;
-    }
-}
-
-/* --- Dropdown Menu (Login Modal) --- */
-.dropdown-menu {
+/* --- Correção: posicionamento e estilo do ícone de busca */
+.search-input-wrapper { position: relative; display: inline-block; }
+.search-input-wrapper .search-icon,
+.search-icon {
     position: absolute;
-    top: calc(100% + 10px); /* Posiciona 10px abaixo do header */
-    right: 1.5rem; /* Alinha com o padding do container do nav */
-    z-index: 40; /* Abaixo do header (z-50) mas acima do resto */
-    width: 320px; /* Largura fixa para o dropdown */
-    box-shadow: 0 10px 25px -5px var(--shadow-color), 0 8px 10px -6px var(--shadow-color);
+    left: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    pointer-events: none;
+    color: var(--text-secondary);
+    font-size: 0.95rem;
+    background: transparent; /* garante que não haja círculo/colorização inesperada */
+    width: 1.25rem;
+    height: 1.25rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+    border-radius: 0;
+}
+
+/* garante espaço à esquerda para o ícone */
+.search-input, input[type="search"].search-input {
+    padding-left: 2.5rem !important; /* 40px - Garante espaço para o ícone da lupa */
 }

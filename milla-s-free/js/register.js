@@ -28,7 +28,19 @@ document.addEventListener('DOMContentLoaded', () => {
 
             } catch (error) {
                 console.error("Erro no cadastro:", error);
-                showMessageModal(`Erro no cadastro: ${error.message.replace('Firebase: ', '')}`);
+                let errorMessage = "Ocorreu um erro inesperado durante o cadastro. Tente novamente.";
+                switch (error.code) {
+                    case 'auth/email-already-in-use':
+                        errorMessage = "Este endereço de e-mail já está em uso por outra conta.";
+                        break;
+                    case 'auth/invalid-email':
+                        errorMessage = "O endereço de e-mail fornecido não é válido.";
+                        break;
+                    case 'auth/weak-password':
+                        errorMessage = "A senha é muito fraca. Por favor, use uma senha com pelo menos 6 caracteres.";
+                        break;
+                }
+                showMessageModal(errorMessage);
             }
         });
     }

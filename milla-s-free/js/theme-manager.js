@@ -2,6 +2,19 @@
  * Módulo para gerenciar o tema da aplicação (claro/escuro).
  */
 const THEME_STORAGE_KEY = 'theme';
+const FAVICON_LIGHT_PATH = '../imagens/milasclock.png';
+const FAVICON_DARK_PATH = '../imagens/millas_escuro.png';
+
+/**
+ * Atualiza o favicon do site com base no tema.
+ * @param {string} theme - O tema atual ('light' ou 'dark').
+ */
+function updateFavicon(theme) {
+    const favicon = document.querySelector("link[rel='icon']");
+    if (favicon) {
+        favicon.href = theme === 'dark' ? FAVICON_DARK_PATH : FAVICON_LIGHT_PATH;
+    }
+}
 
 /**
  * Atualiza o ícone do botão de tema com base no tema atual do body.
@@ -28,6 +41,7 @@ function toggleTheme() {
     const isDark = document.documentElement.classList.toggle('dark');
     const newTheme = isDark ? 'dark' : 'light';
     localStorage.setItem(THEME_STORAGE_KEY, newTheme);
+    updateFavicon(newTheme);
     return newTheme;
 }
 
@@ -43,6 +57,7 @@ function applyInitialTheme() {
     } else {
         document.documentElement.classList.add('dark');
     }
+    updateFavicon(savedTheme === 'light' ? 'light' : 'dark');
 }
 
 /**
