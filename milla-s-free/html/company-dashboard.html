@@ -25,7 +25,6 @@
                     <li><a href="index.html"><i class="fas fa-tachometer-alt"></i> <span>Painel</span></a></li>
                     <li><a href="company-dashboard.html" class="active"><i class="fas fa-users"></i> <span>Membros</span></a></li>
                     <li><a href="reports.html"><i class="fas fa-chart-pie"></i> <span>Relatórios</span></a></li>
-                    <li class="sidebar-logout-item"><a href="#" id="sidebar-logout-button"><i class="fas fa-sign-out-alt"></i> <span>Sair</span></a></li>
                 </ul>
             </nav>
         </aside>
@@ -122,22 +121,7 @@
     <!-- Modals Container -->
     <div id="modals-container">
         <!-- Overlay da Página (usado com modais) -->
-        <div id="page-overlay" class="fixed inset-0 bg-black bg-opacity-20 hidden z-30"></div>
-
-        <!-- Modal de Perfil (Reutilizável) -->
-        <div id="profile-modal" class="dropdown-menu hidden z-40 !right-8 !top-[70px]">
-            <div class="card p-4 w-full max-w-xs">
-                <div id="user-view" class="space-y-3">
-                    <div class="text-sm">
-                        <p class="font-semibold" id="user-email-display">carregando...</p>
-                        <div id="verification-status" class="text-xs mt-1"></div>
-                    </div>
-                    <hr class="border-border-color">
-                    <a href="settings.html" class="block text-sm hover:text-primary"><i class="fas fa-cog w-6"></i> Configurações</a>
-                    <a href="#" id="logout-button" class="block text-sm hover:text-primary"><i class="fas fa-sign-out-alt w-6"></i> Sair</a>
-                </div>
-            </div>
-        </div>
+        <div id="page-overlay" class="fixed inset-0 bg-black bg-opacity-20 hidden z-30"></div>        
 
         <!-- Modal de Adicionar Colaborador -->
         <div id="create-member-modal" class="fixed inset-0 modal-backdrop flex items-center justify-center hidden z-50">
@@ -206,6 +190,21 @@
                         </button>
                     </div>
                 </form>
+            </div>
+        </div>
+
+        <!-- Modal de Perfil (Reutilizável) -->
+        <div id="profile-modal" class="dropdown-menu hidden z-40 !right-8 !top-[70px]">
+            <div class="card p-4 w-full max-w-xs">
+                <div id="user-view" class="space-y-3">
+                    <div class="text-sm">
+                        <p class="font-semibold" id="user-email-display">carregando...</p>
+                        <div id="verification-status" class="text-xs mt-1"></div>
+                    </div>
+                    <hr class="border-border-color">
+                    <a href="settings.html" class="block text-sm hover:text-primary"><i class="fas fa-cog w-6"></i> Configurações</a>
+                    <a href="#" id="logout-button" class="block text-sm hover:text-primary"><i class="fas fa-sign-out-alt w-6"></i> Sair</a>
+                </div>
             </div>
         </div>
 

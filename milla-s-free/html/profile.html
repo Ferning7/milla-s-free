@@ -31,7 +31,6 @@
             <nav class="sidebar-nav">
                 <ul>
                     <li><a href="profile.html" class="active"><i class="fas fa-user-clock"></i> <span>Meu Painel</span></a></li>
-                    <li class="sidebar-logout-item"><a href="#" id="logout-button"><i class="fas fa-sign-out-alt"></i> <span>Sair</span></a></li>
                 </ul>
             </nav>
         </aside>
@@ -99,8 +98,10 @@
         <!-- Modal de Perfil (Reutilizável) -->
         <div id="profile-modal" class="dropdown-menu hidden z-40 !right-8 !top-[70px]">
             <div class="card p-4 w-full max-w-xs">
-                <div class="space-y-3">
-                    <p id="member-name-display" class="font-semibold text-sm">Carregando...</p>
+                <div id="user-view" class="space-y-3">
+                    <div class="text-sm">
+                        <p id="member-name-display" class="font-semibold">Carregando...</p>
+                    </div>
                     <hr class="border-border-color">
                     <a href="#" id="logout-button" class="block text-sm hover:text-primary"><i class="fas fa-sign-out-alt w-6"></i> Sair</a>
                 </div>

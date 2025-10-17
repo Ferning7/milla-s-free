@@ -1,0 +1,34 @@
+# Milla's Free - To-Do List
+
+Lista de tarefas e melhorias para o projeto.
+
+---
+
+###  Alta Prioridade (Essencial)(Fix)
+
+*   **Login do Colaborador:** Unificar o método de acesso. A `landing.html` fala em "token", mas a tela de login usa e-mail/senha. **Ação:** Padronizar para convite por e-mail, onde o colaborador cria sua própria senha.
+*   **Gráficos do Painel:** Corrigir o erro nos gráficos do painel do gestor. **Ação:** Adicionar o script da biblioteca `Chart.js` no arquivo `index.html`.
+*   **Cadastro de Gestor:** Melhorar a experiência do usuário. **Ação:** Fazer o redirecionamento para o painel acontecer somente *depois* que o usuário clicar em "OK" no modal de sucesso.
+
+---
+
+###  Média Prioridade (Novas Funcionalidades)(Feat)
+
+*   **Página de Colaboradores:** Criar uma nova tela (`members.html`) para o gestor poder convidar, editar e remover membros da equipe.
+*   **Página de Tarefas:** Criar uma nova tela (`tasks.html`) para o gestor criar e gerenciar as tarefas/projetos padrão da empresa.
+*   **Exportar Relatório (CSV):** Implementar a função de exportar os dados de horas para um arquivo CSV no painel do gestor.
+
+---
+
+###  Baixa Prioridade (Melhorias e Refatoração)(Style)
+
+*   **Feedback de Carregamento:** Adicionar ícones de "spinner" (carregando) nos botões de login e cadastro para indicar que uma ação está em andamento.
+*   **Clareza na Senha:** Melhorar o texto do "Esqueci minha senha" do colaborador para deixar claro que a função também serve para o primeiro acesso.
+
+---
+
+###  Lembretes Gerais
+
+*   Revisar e fortalecer as regras de segurança do Firebase.
+*   Garantir que todas as ações tenham um bom tratamento de erros.
+*   Manter a documentação (`README.md`) atualizada.

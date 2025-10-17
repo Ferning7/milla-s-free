@@ -2,7 +2,7 @@ import { initializeApp } from './app.js';
 import { db } from './firebase-services.js';
 import { showMessageModal, formatDuration, updateChart, toggleButtonLoading } from './ui-helpers.js';
 import { Timer } from './timer.js';
-import { getAuth, sendPasswordResetEmail, sendEmailVerification } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+import { getAuth, sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 import { doc, getDoc, addDoc, setDoc, updateDoc, deleteDoc, onSnapshot, collection, query, where, orderBy, limit, startAfter, endBefore, getDocs, setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 setLogLevel('warn');
@@ -84,7 +84,6 @@ function initDashboardPage(user) {
     setupMembersListener();
     setupRealtimeChart();
     setupTasksListener();
-    updateVerificationStatus(user);
 
     timer = new Timer(
         document.getElementById('timer-display'),
@@ -191,46 +190,6 @@ function initDashboardPage(user) {
 }
 
 initializeApp(initDashboardPage, getAuth());
-
-function updateVerificationStatus(user) {
-    const verificationStatusEl = document.getElementById('verification-status');    
-
-    if (!verificationStatusEl) return;
-
-    verificationStatusEl.innerHTML = '';
-    if (user.emailVerified) {
-        const verifiedSpan = document.createElement('span');
-        verifiedSpan.className = 'text-green-500 flex items-center gap-1';
-        const icon = document.createElement('i');
-        icon.className = 'fas fa-check-circle';
-        verifiedSpan.append(icon, ' E-mail verificado');
-        verificationStatusEl.appendChild(verifiedSpan);
-    } else {
-        const containerDiv = document.createElement('div');
-        containerDiv.className = 'flex items-center justify-between';
-        const unverifiedSpan = document.createElement('span');
-        unverifiedSpan.className = 'text-yellow-500 flex items-center gap-1';
-        const icon = document.createElement('i');
-        icon.className = 'fas fa-exclamation-triangle';
-        unverifiedSpan.append(icon, ' E-mail não verificado');
-        const resendButton = document.createElement('button');
-        resendButton.id = 'resend-verification-button';
-        resendButton.className = 'text-xs text-blue-500 hover:underline ml-2';
-        resendButton.textContent = 'Reenviar';
-        containerDiv.append(unverifiedSpan, resendButton);
-        verificationStatusEl.appendChild(containerDiv);
-
-        resendButton.addEventListener('click', async () => {
-            try {
-                await sendEmailVerification(user);
-                showMessageModal("Um novo e-mail de verificação foi enviado.");
-            } catch (error) {
-                console.error("Erro ao reenviar email de verificação:", error);
-                showMessageModal("Erro ao reenviar e-mail. Tente novamente mais tarde.");
-            }
-        });
-    }
-}
 
 function handleStartTimer() {
     if (timer && timer.isRunning) {
