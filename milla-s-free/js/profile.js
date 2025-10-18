@@ -1,12 +1,16 @@
 import { auth, db } from './firebase-services.js';
 import { initThemeManager } from './theme-manager.js';
-import { Timer } from './timer.js';
-import { formatDuration } from './ui-helpers.js';
+import { formatDuration, showMessageModal } from './ui-helpers.js';
 import { onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 import { doc, getDoc, addDoc, collection, query, where, onSnapshot, orderBy } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 let memberId, companyId;
-let timer;
+
+// Lógica de timer interna para evitar conflitos
+let timerInterval = null;
+let timerIsRunning = false;
+let timerStartTime = null;
+let timerProjectName = '';
 
 function initUIElements() {
     const profileToggle = document.getElementById('profile-toggle');
@@ -54,14 +58,7 @@ async function initializeFirebase() {
                     // Inicializar funcionalidades da página
                     setupTimeEntriesListener();
                     setupTasksListener();
-                    timer = new Timer(
-                        document.getElementById('timer-display'),
-                        document.getElementById('start-button'),
-                        document.getElementById('stop-button'),
-                        document.getElementById('project-input'),
-                        document.getElementById('project-input'),
-                        saveTimeEntry
-                    );
+                    setupTimerControls();
                 } else {
                     console.error("Documento do membro não encontrado!");
                     await signOut(auth).catch(err => console.error("Sign out failed", err));
@@ -76,6 +73,63 @@ async function initializeFirebase() {
     } catch (error) {
         console.error("Erro na inicialização do Firebase:", error);
     }
+}
+
+function setupTimerControls() {
+    const startButton = document.getElementById('start-button');
+    const stopButton = document.getElementById('stop-button');
+    const projectInput = document.getElementById('project-input');
+    const timerDisplay = document.getElementById('timer-display');
+
+    if (!startButton || !stopButton || !projectInput || !timerDisplay) return;
+
+    const updateTimerDisplay = () => {
+        if (!timerIsRunning) return;
+        const elapsedTime = Date.now() - timerStartTime;
+        timerDisplay.textContent = formatDuration(Math.floor(elapsedTime / 1000));
+    };
+
+    const startTimer = (taskName) => {
+        if (timerIsRunning) return;
+        timerIsRunning = true;
+        timerStartTime = Date.now();
+        timerProjectName = taskName;
+        projectInput.value = taskName;
+        projectInput.readOnly = true;
+
+        timerInterval = setInterval(updateTimerDisplay, 1000);
+        startButton.classList.add('timer-active');
+        stopButton.disabled = false;
+        startButton.disabled = true;
+    };
+
+    const stopTimer = async () => {
+        if (!timerIsRunning) return;
+        clearInterval(timerInterval);
+        const duration = Date.now() - timerStartTime;
+        await saveTimeEntry(timerProjectName, duration);
+
+        // Reset state
+        timerIsRunning = false;
+        timerStartTime = null;
+        timerDisplay.textContent = "00:00:00";
+        startButton.classList.remove('timer-active');
+        startButton.disabled = false;
+        stopButton.disabled = true;
+        projectInput.value = '';
+        projectInput.readOnly = false;
+    };
+
+    startButton.addEventListener('click', () => {
+        const taskName = projectInput.value.trim();
+        if (!taskName) {
+            showMessageModal("Por favor, digite o nome da tarefa para iniciar.");
+            return;
+        }
+        startTimer(taskName);
+    });
+
+    stopButton.addEventListener('click', stopTimer);
 }
 
 async function saveTimeEntry(projectName, duration) {

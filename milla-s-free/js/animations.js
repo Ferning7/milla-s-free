@@ -20,9 +20,8 @@ export function initScrollAnimations(selector) {
             // Adiciona a classe 'visible' quando o elemento entra na tela
             if (entry.isIntersecting) {
                 entry.target.classList.add('visible');
-            } else {
-                // Remove a classe quando o elemento sai da tela, permitindo que a animação ocorra novamente
-                entry.target.classList.remove('visible');
+                // Uma vez que a animação ocorreu, o observador não precisa mais monitorar este elemento.
+                observer.unobserve(entry.target);
             }
         });
     }, {

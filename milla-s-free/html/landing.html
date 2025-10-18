@@ -23,6 +23,8 @@
         })();
     </script>
     <link rel="stylesheet" href="../css/styles.css">
+    <!-- Adiciona a biblioteca Chart.js, necessária para o gráfico de pizza -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
 </head>
 
@@ -186,27 +188,35 @@
             <div class="container mx-auto text-center">
                 <h3 class="text-3xl md:text-4xl font-bold animate-on-scroll">Experimente a simplicidade</h3>
                 <p class="text-lg mt-2 mb-8 animate-on-scroll delay-1 text-secondary">Interaja com uma demonstração do nosso painel e veja como é fácil começar.</p>
-                <div class="card max-w-4xl mx-auto p-8 animate-on-scroll delay-2">
-                    <div class="flex flex-col md:flex-row items-center justify-between gap-8">
-                        <!-- Timer -->
-                        <div class="text-center">
-                            <p class="font-semibold mb-2">Rastreie seu tempo</p>
-                            <div id="sandbox-timer" class="text-4xl font-mono mb-4">00:00:00</div>
-                            <button id="sandbox-start-btn" class="btn btn-success">Iniciar</button>
-                        </div>
-                        <!-- Chart -->
-                        <div class="text-center w-full md:w-1/2">
-                            <p class="font-semibold mb-2">Acompanhe seus projetos</p>
-                            <div class="sandbox-chart-container rounded-lg p-4">
-                                <div class="flex justify-between text-sm text-secondary"><span>Projeto A</span><span>Projeto B</span></div>
-                                <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-4 mt-2">
-                                    <div id="sandbox-chart-bar" class="bg-primary h-4 rounded-full" style="width: 25%; transition: width 0.5s ease-in-out;"></div>
-                                </div>
-                            </div>
-                            <button id="sandbox-add-hours-btn" class="btn btn-secondary mt-4">Adicionar Horas</button>
+                <div class="card max-w-2xl mx-auto p-8 animate-on-scroll delay-2">
+                    <h4 class="text-xl font-bold mb-2">Rastreie seu tempo em um projeto</h4>
+                    <p class="text-secondary mb-6">Clique em "Iniciar" para ver o tempo e o progresso (limite de 30s).</p>
+
+                    <!-- Gráfico e Timer Centralizados -->
+                    <div class="relative w-48 h-48 mx-auto mb-6">
+                        <canvas id="sandbox-pieChart"></canvas>
+                        <div id="sandbox-timerDisplay" class="absolute inset-0 flex items-center justify-center text-5xl font-mono font-bold">
+                            00
                         </div>
                     </div>
-                    <a href="#" class="btn btn-primary text-lg px-8 py-3 mt-12 btn-to-dashboard open-login-modal-trigger">Começar Agora</a>
+
+                    <!-- Controles do Timer -->
+                    <div class="flex flex-col items-center gap-2">
+                        <div class="flex items-center gap-4">
+                            <button id="sandbox-mainButton" class="btn btn-success w-32">Iniciar</button>
+                            <button id="sandbox-resetButton" class="btn btn-secondary w-32 hidden">Redefinir</button>
+                            <div id="sandbox-finalActions" class="flex space-x-4 hidden">
+                                <button id="sandbox-keepButton" class="btn btn-primary w-32">Manter</button>
+                                <button id="sandbox-resetFinalButton" class="btn btn-secondary w-32">Redefinir</button>
+                            </div>
+                        </div>
+                        <div class="h-8 mt-2 flex items-center">
+                            <p class="text-sm text-secondary" id="sandbox-statusMessage">Pronto para iniciar.</p>
+                            <div id="sandbox-confirmationMessage" class="hidden text-center p-2 bg-primary/10 border border-primary text-primary rounded-lg text-sm">
+                                <!-- Mensagem de confirmação será inserida aqui -->
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </section>
@@ -435,20 +445,6 @@
             <p class="text-sm mt-2">Desenvolvido como projeto de TCC no SENAI-CTTI em parceria com 3AQ Tecnologia.</p>
         </div>
     </footer>
-
-    <!-- Container para Modais Globais (Mensagens, etc.) -->
-    <div id="modals-container">
-        <!-- Modal de Mensagem -->
-        <div id="message-modal" class="fixed inset-0 modal-backdrop flex items-center justify-center hidden z-50 p-4">
-            <div class="card p-6 w-full max-w-sm text-center">
-                <p id="message-text" class="text-lg font-semibold mb-4"></p>
-                <div id="message-buttons" class="flex justify-center space-x-4">
-                    <button id="message-ok" class="btn btn-primary">OK</button>
-                    <button id="message-cancel" class="btn btn-secondary hidden">Cancelar</button>
-                </div>
-            </div>
-        </div>
-    </div>
 
     <script type="module" src="../js/landing-page.js"></script>
 
