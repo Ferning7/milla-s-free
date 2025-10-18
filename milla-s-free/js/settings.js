@@ -1,11 +1,10 @@
 import { initThemeManager } from './theme-manager.js';
 import { showMessageModal, toggleButtonLoading } from './ui-helpers.js';
-import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-import { getAuth, onAuthStateChanged, updatePassword, EmailAuthProvider, reauthenticateWithCredential, deleteUser } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-import { getFirestore, doc, getDoc, setDoc, collection, query, where, getDocs, writeBatch, deleteDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-import firebaseConfig from './FireBase.js';
+import { auth, db } from './firebase-services.js';
+import { onAuthStateChanged, updatePassword, EmailAuthProvider, reauthenticateWithCredential, deleteUser } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+import { doc, getDoc, setDoc, collection, query, where, getDocs, writeBatch, deleteDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-let app, auth, db, userId;
+let userId;
 
 // Function to handle data export
 async function exportDataToCSV() {
@@ -51,38 +50,39 @@ function downloadCSV(csvContent, fileName) {
 }
 
 // Function to handle account deletion
-async function deleteAccount() {
+async function handleAccountDeletion() {
     if (!db || !auth.currentUser) return;
 
-    const firstConfirm = await showMessageModal("Tem certeza que deseja excluir sua conta? Esta ação é irreversível.", 'confirm');
-    if (!firstConfirm) return;
-
-    const secondConfirm = await showMessageModal("Esta é sua última chance. Todos os seus dados (membros, tarefas, registros) serão permanentemente apagados. Confirma a exclusão?", 'confirm');
-    if (!secondConfirm) return;
-
     try {
-        // Delete all associated data
+        // 1. Delete all associated data from Firestore
         const collectionsToDelete = ['members', 'tasks', 'timeEntries'];
         for (const coll of collectionsToDelete) {
-            const q = query(collection(db, coll), where("companyId", "==", userId));
-            const snapshot = await getDocs(q);
-            const batch = writeBatch(db);
-            snapshot.docs.forEach(doc => batch.delete(doc.ref));
-            await batch.commit();
+            try {
+                const q = query(collection(db, coll), where("companyId", "==", userId));
+                const snapshot = await getDocs(q);
+                if (!snapshot.empty) {
+                    const batch = writeBatch(db);
+                    snapshot.docs.forEach(doc => batch.delete(doc.ref));
+                    await batch.commit();
+                }
+            } catch (e) {
+                console.warn(`Could not delete from collection ${coll}. It might not exist. Error:`, e);
+                // Continue to the next collection even if one fails
+            }
         }
 
-        // Delete company profile
+        // 2. Delete company profile
         await deleteDoc(doc(db, "companies", userId));
 
-        // Delete user
+        // 3. Delete the user from Auth
         await deleteUser(auth.currentUser);
         
-        showMessageModal("Sua conta foi excluída com sucesso.");
-        window.location.href = 'landing.html';
+        await showMessageModal("Sua conta foi excluída com sucesso.");
+        window.location.href = 'landing.html'; // Redirect after user clicks OK
 
     } catch (error) {
         console.error("Erro ao excluir conta:", error);
-        showMessageModal("Erro ao excluir a conta. Pode ser necessário fazer login novamente por segurança. Se o erro persistir, contate o suporte.");
+        showMessageModal("Ocorreu um erro durante a exclusão final da conta. Por favor, contate o suporte.");
     }
 }
 
@@ -90,14 +90,6 @@ async function deleteAccount() {
 document.addEventListener('DOMContentLoaded', () => {
     initThemeManager('theme-toggle');
     initThemeManager('theme-toggle-settings');
-
-    // Inicializa o Firebase apenas se ainda não foi inicializado
-    if (!app) { // Verifica se 'app' ainda não foi definido
-        app = initializeApp(firebaseConfig);
-        auth = getAuth(app);
-        db = getFirestore(app);
-    }
-    
 
     const profileForm = document.getElementById('profile-form');
     const companyNameInput = document.getElementById('company-name');
@@ -109,6 +101,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const exportDataButton = document.getElementById('export-data-button');
     const deleteAccountButton = document.getElementById('delete-account-button');
+    const reauthModal = document.getElementById('reauth-modal');
+    const reauthForm = document.getElementById('reauth-form');
+    const reauthCancelButton = document.getElementById('reauth-cancel-button');
 
     onAuthStateChanged(auth, async (user) => {
         if (user) {
@@ -194,7 +189,44 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // Handle Account Deletion
-    if (deleteAccountButton) {
-        deleteAccountButton.addEventListener('click', deleteAccount);
+    if (deleteAccountButton && reauthModal && reauthForm && reauthCancelButton) {
+        deleteAccountButton.addEventListener('click', async () => {
+            const firstConfirm = await showMessageModal("Tem certeza que deseja excluir sua conta? Esta ação é irreversível.", 'confirm');
+            if (!firstConfirm) return;
+
+            const secondConfirm = await showMessageModal("Esta é sua última chance. Todos os seus dados serão permanentemente apagados. Confirma a exclusão?", 'confirm');
+            if (!secondConfirm) return;
+
+            // Show re-authentication modal instead of deleting directly
+            reauthModal.classList.remove('hidden');
+        });
+
+        reauthCancelButton.addEventListener('click', () => {
+            reauthModal.classList.add('hidden');
+            reauthForm.reset();
+        });
+
+        reauthForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const password = document.getElementById('reauth-password').value;
+            const user = auth.currentUser;
+
+            if (!user || !password) return;
+
+            try {
+                const credential = EmailAuthProvider.credential(user.email, password);
+                await reauthenticateWithCredential(user, credential);
+                
+                // Re-authentication successful, now proceed with deletion
+                reauthModal.classList.add('hidden');
+                await handleAccountDeletion();
+
+            } catch (error) {
+                console.error("Re-authentication failed:", error);
+                showMessageModal("Senha incorreta. A exclusão da conta foi cancelada.");
+                reauthModal.classList.add('hidden');
+                reauthForm.reset();
+            }
+        });
     }
 });

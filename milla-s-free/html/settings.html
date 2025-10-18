@@ -172,7 +172,28 @@
         <div id="message-modal" class="fixed inset-0 modal-backdrop flex items-center justify-center hidden z-50 p-4">
             <div class="card p-6 w-full max-w-sm text-center">
                 <p id="message-text" class="text-lg font-semibold mb-4"></p>
-                <button id="message-ok" class="btn btn-primary">OK</button>
+                <div id="message-buttons" class="flex justify-center space-x-4">
+                    <button id="message-ok" class="btn btn-primary">OK</button>
+                    <button id="message-cancel" class="btn btn-secondary hidden">Cancelar</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Modal de Confirmação de Senha para Exclusão -->
+        <div id="reauth-modal" class="fixed inset-0 modal-backdrop flex items-center justify-center hidden z-50 p-4">
+            <div class="card p-6 w-full max-w-sm text-center">
+                <h3 class="text-xl font-bold mb-2">Confirmação de Segurança</h3>
+                <p class="text-secondary mb-4">Para excluir sua conta, por favor, digite sua senha novamente.</p>
+                <form id="reauth-form">
+                    <div class="mb-4">
+                        <label for="reauth-password" class="sr-only">Senha</label>
+                        <input id="reauth-password" type="password" required class="w-full p-2 text-center" placeholder="Sua senha">
+                    </div>
+                    <div class="flex justify-center space-x-4">
+                        <button type="button" id="reauth-cancel-button" class="btn btn-secondary">Cancelar</button>
+                        <button type="submit" id="reauth-confirm-button" class="btn btn-danger">Confirmar Exclusão</button>
+                    </div>
+                </form>
             </div>
         </div>
 

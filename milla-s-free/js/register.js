@@ -22,9 +22,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 await sendEmailVerification(userCredential.user);
                 registerForm.reset();
                 
-                // Mostra a mensagem e, quando o usuário clicar em OK, redireciona para o painel.
-                await showMessageModal("Cadastro realizado com sucesso! Um e-mail de verificação foi enviado. Você será redirecionado para o painel.");
-                window.location.href = 'index.html';
+                // Define um gatilho para abrir o modal de login na landing page.
+                localStorage.setItem('openLoginModal', 'true');
+                // Mostra a mensagem e, quando o usuário clicar em OK, redireciona para a landing page.
+                await showMessageModal("Cadastro realizado com sucesso! Um e-mail de verificação foi enviado. Agora, faça login para acessar seu painel.");
+                window.location.href = 'landing.html';
 
             } catch (error) {
                 console.error("Erro no cadastro:", error);
