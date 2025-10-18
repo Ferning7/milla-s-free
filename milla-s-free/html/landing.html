@@ -13,8 +13,6 @@
         }
     </script>
     <script>
-        // Previne o "flash" do tema incorreto (FOUC) ao carregar a página.
-        // Este script é executado antes da renderização do body.
         (function() {
             const theme = localStorage.getItem('theme');
             if (theme === 'light') {

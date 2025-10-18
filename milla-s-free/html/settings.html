@@ -37,6 +37,8 @@
                     <li><a href="index.html"><i class="fas fa-tachometer-alt"></i> <span>Painel</span></a></li>
                     <li><a href="company-dashboard.html"><i class="fas fa-users"></i> <span>Membros</span></a></li>
                     <li><a href="reports.html"><i class="fas fa-chart-pie"></i> <span>Relatórios</span></a></li>
+                    <li><a href="settings.html" class="active"><i class="fas fa-cog"></i> <span>Configurações</span></a></li>
+                    <li class="hidden"><a href="profile.html"><i class="fas fa-user-clock"></i> <span>Meu Painel</span></a></li>
                 </ul>
             </nav>
         </aside>
@@ -160,7 +162,7 @@
                         <div id="verification-status" class="text-xs mt-1"></div>
                     </div>
                     <hr class="border-border-color">
-                    <a href="settings.html" class="block text-sm hover:text-primary"><i class="fas fa-cog w-6"></i> Configurações</a>
+                    <a href="settings.html" class="block text-sm hover:text-primary active"><i class="fas fa-cog w-6"></i> Configurações</a>
                     <a href="#" id="logout-button" class="block text-sm hover:text-primary"><i class="fas fa-sign-out-alt w-6"></i> Sair</a>
                 </div>
             </div>
@@ -174,144 +176,6 @@
             </div>
         </div>
 
-        <!-- Create Member Modal -->
-        <div id="create-member-modal" class="fixed inset-0 modal-backdrop flex items-center justify-center hidden z-50 p-4" role="dialog" aria-modal="true" aria-labelledby="create-member-title">
-          <div class="card p-6 w-full max-w-md relative">
-            <button id="close-create-member" class="btn-icon absolute top-4 right-4" aria-label="Fechar modal">&times;</button>
-
-            <h3 id="create-member-title" class="text-xl font-bold mb-4">Adicionar Novo Colaborador</h3>
-
-            <form id="create-member-form" class="space-y-4" autocomplete="off" novalidate>
-              <div>
-                <label for="member-name" class="block text-sm font-medium mb-1">Nome</label>
-                <input id="member-name" name="member-name" type="text" required class="w-full p-2 text-sm" />
-              </div>
-
-              <div>
-                <label for="member-email" class="block text-sm font-medium mb-1">Email</label>
-                <input id="member-email" name="member-email" type="email" required class="w-full p-2 text-sm" />
-              </div>
-
-              <div id="create-member-feedback" class="text-sm text-red-500 hidden" role="status" aria-live="polite"></div>
-
-              <div class="flex justify-end gap-4 mt-6">
-                <button type="button" id="cancel-create-member-button" class="btn btn-secondary">Cancelar</button>
-
-                <button type="submit" id="submit-create-member" class="btn btn-primary inline-flex items-center">
-                  <span class="button-text">Adicionar</span>
-                  <i class="fas fa-spinner fa-spin hidden button-spinner ml-2" aria-hidden="true"></i>
-                </button>
-              </div>
-
-              <!-- Resultado / Token gerado (visível após sucesso) -->
-              <div id="create-member-result" class="mt-4 hidden" aria-hidden="true">
-                <label class="block text-sm font-medium mb-1">Token de Acesso (envie ao colaborador)</label>
-                <div class="flex gap-2">
-                  <input id="member-token" readonly class="token-input w-full p-2 text-sm" />
-                  <button type="button" id="copy-member-token" class="btn btn-secondary">Copiar</button>
-                </div>
-                <p class="text-sm text-secondary mt-2">O colaborador usará este token para trocar por um login. O token pode ser regenerado a qualquer momento.</p>
-              </div>
-            </form>
-          </div>
-        </div>
-
-        <!-- Edit Member Modal -->
-        <div id="edit-member-modal" class="fixed inset-0 modal-backdrop flex items-center justify-center hidden z-50 p-4" role="dialog" aria-modal="true" aria-labelledby="edit-member-title">
-          <div class="card p-6 w-full max-w-md relative">
-            <button id="close-edit-member" class="btn-icon absolute top-4 right-4" aria-label="Fechar modal">&times;</button>
-
-            <h3 id="edit-member-title" class="text-xl font-bold mb-4">Editar Colaborador</h3>
-
-            <form id="edit-member-form" class="space-y-4" autocomplete="off" novalidate>
-              <input type="hidden" id="edit-member-id" />
-
-              <div>
-                <label for="edit-member-name" class="block text-sm font-medium mb-1">Nome</label>
-                <input id="edit-member-name" type="text" required class="w-full p-2 text-sm" />
-              </div>
-
-              <div>
-                <label for="edit-member-email" class="block text-sm font-medium mb-1">Email</label>
-                <input id="edit-member-email" type="email" required class="w-full p-2 text-sm" />
-              </div>
-
-              <div id="edit-member-feedback" class="text-sm text-red-500 hidden" role="status" aria-live="polite"></div>
-
-              <div class="flex justify-between items-center gap-4 mt-6">
-                <div class="flex gap-2">
-                  <button type="button" id="regenerate-member-token" class="btn btn-warning" title="Regenerar token">
-                    <i class="fas fa-sync-alt"></i>
-                    <span class="ml-2">Regenerar Token</span>
-                    <i class="fas fa-spinner fa-spin hidden button-spinner ml-2" aria-hidden="true"></i>
-                  </button>
-
-                  <button type="button" id="delete-member-button" class="btn btn-danger" title="Remover colaborador">
-                    <i class="fas fa-trash-alt"></i>
-                    <span class="ml-2">Excluir</span>
-                  </button>
-                </div>
-
-                <div class="flex gap-4">
-                  <button type="button" id="cancel-edit-member-button" class="btn btn-secondary">Cancelar</button>
-
-                  <button type="submit" id="save-edit-member-button" class="btn btn-primary inline-flex items-center">
-                    <span class="button-text">Salvar Alterações</span>
-                    <i class="fas fa-spinner fa-spin hidden button-spinner ml-2" aria-hidden="true"></i>
-                  </button>
-                </div>
-              </div>
-
-              <!-- Resultado / Token atualizado (visível após regeneração) -->
-              <div id="edit-member-result" class="mt-4 hidden" aria-hidden="true">
-                <label class="block text-sm font-medium mb-1">Token de Acesso</label>
-                <div class="flex gap-2">
-                  <input id="edit-member-token" readonly class="token-input w-full p-2 text-sm" />
-                  <button type="button" id="copy-edit-member-token" class="btn btn-secondary">Copiar</button>
-                </div>
-                <p class="text-sm text-secondary mt-2">Envie o token atualizado ao colaborador se necessário.</p>
-              </div>
-            </form>
-          </div>
-        </div>
-
-        <!-- Edit Task Modal -->
-        <div id="edit-task-modal" class="fixed inset-0 modal-backdrop flex items-center justify-center hidden z-50 p-4" role="dialog" aria-modal="true" aria-labelledby="edit-task-title">
-          <div class="card p-6 w-full max-w-md relative">
-            <button id="close-edit-task" class="btn-icon absolute top-4 right-4" aria-label="Fechar modal">&times;</button>
-
-            <h3 id="edit-task-title" class="text-xl font-bold mb-4">Editar Tarefa</h3>
-
-            <form id="edit-task-form" class="space-y-4" autocomplete="off" novalidate>
-              <input type="hidden" id="edit-task-id" />
-
-              <div>
-                <label for="edit-task-name" class="block text-sm font-medium mb-1">Nome da Tarefa</label>
-                <input id="edit-task-name" type="text" required class="w-full p-2 text-sm" />
-              </div>
-
-              <div id="edit-task-feedback" class="text-sm text-red-500 hidden" role="status" aria-live="polite"></div>
-
-              <div class="flex justify-between items-center gap-4 mt-6">
-                <div class="flex gap-2">
-                  <button type="button" id="delete-task-button" class="btn btn-danger" title="Remover tarefa">
-                    <i class="fas fa-trash-alt"></i>
-                    <span class="ml-2">Excluir</span>
-                  </button>
-                </div>
-
-                <div class="flex gap-4">
-                  <button type="button" id="cancel-edit-task-button" class="btn btn-secondary">Cancelar</button>
-
-                  <button type="submit" id="save-edit-task-button" class="btn btn-primary inline-flex items-center">
-                    <span class="button-text">Salvar Alterações</span>
-                    <i class="fas fa-spinner fa-spin hidden button-spinner ml-2" aria-hidden="true"></i>
-                  </button>
-                </div>
-              </div>
-            </form>
-          </div>
-        </div>
     </div>
 
     <script type="module" src="../js/settings.js"></script>
