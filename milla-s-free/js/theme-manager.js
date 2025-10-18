@@ -1,6 +1,41 @@
 /**
  * Módulo para gerenciar o tema da aplicação (claro/escuro).
  */
+
+/**
+ * Define as cores globais do Chart.js para o modo escuro.
+ */
+function setChartJsDefaultsDark() {
+    if (typeof Chart === 'undefined') return;
+    Chart.defaults.color = '#FFFFFF';
+    Chart.defaults.scale.ticks.color = '#CCCCCC';
+    Chart.defaults.scale.grid.color = '#444444';
+    Chart.defaults.plugins.legend.labels.color = '#CCCCCC';
+}
+
+/**
+ * Reseta as cores globais do Chart.js para o padrão do modo claro.
+ */
+function setChartJsDefaultsLight() {
+    if (typeof Chart === 'undefined') return;
+    Chart.defaults.color = '#666';
+    Chart.defaults.scale.ticks.color = '#666';
+    Chart.defaults.scale.grid.color = 'rgba(0, 0, 0, 0.1)';
+    Chart.defaults.plugins.legend.labels.color = '#666';
+}
+
+/**
+ * Aplica o tema correto aos gráficos Chart.js e os atualiza.
+ */
+function updateChartsTheme() {
+    if (typeof Chart === 'undefined') return;
+    const isDarkMode = document.documentElement.classList.contains('dark');
+    isDarkMode ? setChartJsDefaultsDark() : setChartJsDefaultsLight();
+    for (const id in Chart.instances) {
+        Chart.instances[id].update();
+    }
+}
+
 const THEME_STORAGE_KEY = 'theme';
 const FAVICON_LIGHT_PATH = '../imagens/milasclock.png';
 const FAVICON_DARK_PATH = '../imagens/millas_escuro.png';
@@ -42,6 +77,7 @@ function toggleTheme() {
     const newTheme = isDark ? 'dark' : 'light';
     localStorage.setItem(THEME_STORAGE_KEY, newTheme);
     updateFavicon(newTheme);
+    updateChartsTheme(); // Atualiza os gráficos após a troca de tema
     return newTheme;
 }
 
@@ -58,6 +94,7 @@ function applyInitialTheme() {
         document.documentElement.classList.add('dark');
     }
     updateFavicon(savedTheme === 'light' ? 'light' : 'dark');
+    updateChartsTheme(); // Aplica o tema aos gráficos no carregamento inicial
 }
 
 /**
@@ -67,8 +104,7 @@ function applyInitialTheme() {
  * @param {function} [onThemeChange] - Callback opcional a ser executado após a mudança de tema.
  */
 function initThemeManager(toggleButtonId, onThemeChange) {
-    // A aplicação inicial do tema agora é feita por um script inline no <head>
-    // para evitar o "flash" de tema.
+    updateChartsTheme(); // Garante que o tema do gráfico seja aplicado no carregamento
 
     const themeToggleButton = document.getElementById(toggleButtonId);
     if (themeToggleButton) {

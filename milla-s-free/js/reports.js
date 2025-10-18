@@ -15,10 +15,6 @@ function renderHoursByProjectChart(data) {
     const ctx = document.getElementById('hours-by-project-chart').getContext('2d');
     if (hoursByProjectChart) hoursByProjectChart.destroy();
 
-    const isDarkMode = document.body.classList.contains('dark');
-    const gridColor = isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)';
-    const textColor = isDarkMode ? '#c5c5c5' : '#1f2937';
-
     hoursByProjectChart = new Chart(ctx, {
         type: 'bar',
         data: {
@@ -33,8 +29,8 @@ function renderHoursByProjectChart(data) {
         options: {
             responsive: true, maintainAspectRatio: false,
             scales: {
-                y: { beginAtZero: true, grid: { color: gridColor }, ticks: { color: textColor } },
-                x: { grid: { display: false }, ticks: { color: textColor } }
+                y: { beginAtZero: true },
+                x: { grid: { display: false } }
             },
             plugins: { legend: { display: false } }
         }
@@ -45,9 +41,7 @@ function renderHoursByMemberChart(data) {
     const ctx = document.getElementById('hours-by-member-chart').getContext('2d');
     if (hoursByMemberChart) hoursByMemberChart.destroy();
 
-    const isDarkMode = document.body.classList.contains('dark');
-    const textColor = isDarkMode ? '#c5c5c5' : '#1f2937';
-    const backgroundColors = ['#8a5cf6', '#60519b', '#a78bfa', '#c4b5fd', '#ddd6fe'];
+    const backgroundColors = ['#8a5cf6', '#60519b', '#a78bfa', '#c4b5fd', '#ddd6fe']; // Mantemos cores específicas para este gráfico
 
     hoursByMemberChart = new Chart(ctx, {
         type: 'doughnut',
@@ -57,7 +51,7 @@ function renderHoursByMemberChart(data) {
                 label: 'Horas por Membro',
                 data: Object.values(data).map(seconds => (seconds / 3600).toFixed(2)),
                 backgroundColor: backgroundColors,
-                borderColor: isDarkMode ? '#2a223d' : '#ffffff',
+                borderColor: document.documentElement.classList.contains('dark') ? '#2a223d' : '#ffffff',
                 borderWidth: 4,
             }]
         },
@@ -66,7 +60,7 @@ function renderHoursByMemberChart(data) {
             plugins: {
                 legend: {
                     position: 'bottom',
-                    labels: { color: textColor, boxWidth: 15, padding: 20 }
+                    labels: { boxWidth: 15, padding: 20 } // A cor será herdada
                 }
             }
         }
@@ -76,10 +70,6 @@ function renderHoursByMemberChart(data) {
 function renderHoursTrendChart(data) {
     const ctx = document.getElementById('hours-trend-chart').getContext('2d');
     if (hoursTrendChart) hoursTrendChart.destroy();
-
-    const isDarkMode = document.body.classList.contains('dark');
-    const gridColor = isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)';
-    const textColor = isDarkMode ? '#c5c5c5' : '#1f2937';
 
     hoursTrendChart = new Chart(ctx, {
         type: 'line',
@@ -97,8 +87,8 @@ function renderHoursTrendChart(data) {
         options: {
             responsive: true, maintainAspectRatio: false,
             scales: {
-                y: { beginAtZero: true, grid: { color: gridColor }, ticks: { color: textColor } },
-                x: { grid: { color: gridColor }, ticks: { color: textColor } }
+                y: { beginAtZero: true },
+                x: {}
             },
             plugins: { legend: { display: false } }
         }

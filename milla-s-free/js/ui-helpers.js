@@ -94,10 +94,6 @@ export function updateChart(chartInstance, data) {
         chartInstance.destroy();
     }
 
-    const isDarkMode = document.body.classList.contains('dark');
-    const gridColor = isDarkMode ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.1)';
-    const textColor = isDarkMode ? '#E2E8F0' : '#1A202C';
-
     const ctx = document.getElementById('project-chart').getContext('2d');
     const newChartInstance = new Chart(ctx, {
         type: 'bar',
@@ -114,11 +110,19 @@ export function updateChart(chartInstance, data) {
         options: {
             responsive: true,
             scales: {
-                y: { beginAtZero: true, title: { display: true, text: 'Tempo Total (segundos)', color: textColor }, ticks: { color: textColor }, grid: { color: gridColor } },
-                x: { ticks: { color: textColor }, grid: { color: gridColor, drawOnChartArea: false } }
+                y: { 
+                    beginAtZero: true, 
+                    title: { display: true, text: 'Tempo Total (segundos)' } 
+                    // As cores de 'ticks', 'grid' e 'title' serão herdadas dos padrões globais.
+                },
+                x: { 
+                    grid: { drawOnChartArea: false } 
+                }
             },
             plugins: {
-                legend: { labels: { color: textColor } },
+                legend: {
+                    // A cor será herdada dos padrões globais
+                },
                 tooltip: {
                     callbacks: {
                         label: function (context) {
