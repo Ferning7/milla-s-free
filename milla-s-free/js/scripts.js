@@ -220,6 +220,8 @@ async function saveTimeEntry(projectName, duration) {
             status: 'approved'
         });
         console.log("Entrada de tempo salva com sucesso.");
+        // Recarrega a tabela para exibir a nova entrada imediatamente.
+        fetchTimeEntriesPage('first');
     } catch (e) {
         console.error("Erro ao adicionar documento: ", e);
         showMessageModal("Erro ao salvar a entrada de tempo. Tente novamente.");
