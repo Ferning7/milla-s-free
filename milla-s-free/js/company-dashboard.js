@@ -1,5 +1,5 @@
 import { initializeApp } from './app.js';
-import { db } from './firebase-services.js';
+import { db, auth } from './firebase-services.js';
 import { showMessageModal, toggleButtonLoading } from './ui-helpers.js';
 import { collection, query, where, onSnapshot, doc, deleteDoc, setLogLevel, updateDoc, orderBy, addDoc } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js';
 
@@ -228,6 +228,8 @@ function initCompanyDashboardPage(user) {
                     return;
                 }
                 
+                console.log("Tentando adicionar tarefa com companyId:", userId);
+                console.log("Usuário autenticado (auth.currentUser.uid):", auth.currentUser ? auth.currentUser.uid : "Nenhum usuário logado");
                 try {
                     await addDoc(collection(db, 'tasks'), {
                         name: taskName,
